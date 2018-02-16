@@ -1,0 +1,14 @@
+package com.castsoftware.jenkins.CastAIPWS;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+
+public class AdBlock {
+
+
+    @DataBoundConstructor
+    public AdBlock()
+    {
+
+    }
+
+}

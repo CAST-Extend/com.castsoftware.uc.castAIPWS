@@ -1,0 +1,39 @@
+Started by user [8mha:AAAAlh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAzOEgYu/dLi1CL9vNKcHACFIKlWvwAAAA==[0manonymous
+Building in workspace C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace
+Web Service: http://nkaw8lap:9898/CastBatchWebService
+[TODAY] = 2016/05/18 17:00:18
+Version Name with Tags: Version 2016-05-18_17-00-18
+
+Delivery Manager Tool
+Using arguments:
+	AddVersion
+	-application: Webgoat
+	-oneApplicationMode: 8f96d984-8019-4a83-91b3-c79cde217b53
+	-version: 5.0
+	-name: Version 2016-05-18_17-00-18
+	-releaseDate: 20160518170018
+	-storagePath: C:/CASTMS/Delivery737
+Log file: C:\Users\nka\AppData\Local\Temp/DMT.log.txt
+Running action: Automates the delivery of a version when the delivery is managed by more than one Delivery Manager. This is the first step in the process and is executed only by the first Delivery Manager. It copies an existing version.
+Return value: 0
+******************************
+Using arguments:
+	Generate
+	-application: Webgoat
+	-oneApplicationMode: 8f96d984-8019-4a83-91b3-c79cde217b53
+	-version: Version 2016-05-18_17-00-18
+	-storagePath: C:/CASTMS/Delivery737
+Log file: C:\Users\nka\AppData\Local\Temp/DMT.log.txt
+Running action: Automates the delivery of a version when the delivery is managed by more than one Delivery Manager. This is the second step in the process and must be run by each Delivery Manager. It generates the version or a specific package.
+Return value: 0
+******************************
+Using arguments:
+	CloseVersion
+	-audience: Integrator
+	-application: Webgoat
+	-oneApplicationMode: 8f96d984-8019-4a83-91b3-c79cde217b53
+	-version: Version 2016-05-18_17-00-18
+	-storagePath: C:/CASTMS/Delivery737
+Log file: C:\Users\nka\AppData\Local\Temp/DMT.log.txt
+Running action: Close version
+

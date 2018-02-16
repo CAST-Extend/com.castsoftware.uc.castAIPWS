@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>START_AT</name>
+          <description>Task # to start job at
+1. Deliver Application Code
+2. Accept Delivery
+3. Run Analysis
+4. Run Snapshot
+5. Run Validation
+6. Publish to AAD
+7. Generate Snapshot Report
+When starting from step 2 on the CAST_DATE is required
+					</description>
+          <defaultValue>0</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CAST_DATE</name>
+          <description>This field is required when restarting an analysis midstream. It must be in the format of MM/dd/yyyy HH:mm:ss and match up with an existing delivery. 					2016/05/20 08:59:25
+					</description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <com.castsoftware.jenkins.CastAIPWS.CastAIPBuilder plugin="CastAIPWS@4.2.2">
+      <dmtWebServiceAddress>http://localhost:9898/CastBatchWebService</dmtWebServiceAddress>
+      <cmsWebServiceAddress>http://localhost:9898/CastBatchWebService</cmsWebServiceAddress>
+      <appName></appName>
+      <versionName>Version [TODAY]</versionName>
+      <referenceVersion></referenceVersion>
+      <castMSConnectionProfile>second_mngt on CastStorageService _ localhost:2280</castMSConnectionProfile>
+      <schemaPrefix>version737</schemaPrefix>
+      <aadSchemaName>version737_measure</aadSchemaName>
+      <retentionPolicy>12</retentionPolicy>
+      <lastRunDate>2016/07/08 11:53:50</lastRunDate>
+      <backup>true</backup>
+      <da>true</da>
+      <ad>true</ad>
+      <ra>true</ra>
+      <rs>true</rs>
+      <archive>false</archive>
+      <rav>false</rav>
+      <publish>true</publish>
+      <optimize>true</optimize>
+      <useJnlp>false</useJnlp>
+      <workFlow>Yes</workFlow>
+    </com.castsoftware.jenkins.CastAIPWS.CastAIPBuilder>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Constants.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CAST Jenkins Plugin</a> &gt; <a href="index.source.html" class="el_package">com.castsoftware.jenkins.CastAIPWS.util</a> &gt; <span class="el_source">Constants.java</span></div><h1>Constants.java</h1><pre class="source lang-java linenums">package com.castsoftware.jenkins.CastAIPWS.util;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+<span class="nc" id="L6">public class Constants</span>
+{
+	static public final String wsVersionCompatibility = &quot;1.3&quot;;
+	static public final String wsBuildCompatibility = &quot;18&quot;;
+<span class="nc" id="L10">	static public final DateFormat dateFormatVersion = new SimpleDateFormat(&quot;yyyy-MM-dd_HH-mm-ss&quot;);</span>
+<span class="nc" id="L11">	static public final DateFormat castDateFormat = new SimpleDateFormat(&quot;yyyy/MM/dd HH:mm:ss&quot;);</span>
+
+	static public final int  RunBackup = 0;
+	static public final int  RunDMT = 1;
+	static public final int  RunAcceptDelivery = 2;
+	static public final int  RunAnalysis = 3;
+	static public final int  RunSnapshot = 4;
+	static public final int  RunValidation = 5;
+	static public final int  RunPublishAAD = 6;
+	static public final int  RunSnapshotReport = 7;
+	static public final int  RunDatabaseOptimize = 8;
+	static public final int  RunArchiveDelivery = 9;
+
+
+	
+	//Jenkins Environment Variable Id's
+	static public final String START_AT=&quot;START_AT&quot;;
+	static public final String CAST_DATE=&quot;CAST_DATE&quot;;
+	static public final String DMT_WEB_SERVICE_ADDRESS=&quot;CAST_DMT_WEB_SERVICE_ADDRESS&quot;;
+	static public final String CMS_WEB_SERVICE_ADDRESS=&quot;CAST_CMS_WEB_SERVICE_ADDRESS&quot;;
+	static public final String APPLICATION_NAME=&quot;CAST_APPL_NAME&quot;;
+	static public final String VERSION_NAME=&quot;CAST_APPL_VERSION&quot;;
+	static public final String CONNECTION_PROFILE=&quot;CAST_CONNECTION_PROFILE&quot;;
+	static public final String SCHEMA_PREFIX=&quot;CAST_SCHEMA_PREFIX&quot;;
+	static public final String AAD_SCHEMA_NAME=&quot;CAST_AAD_SCHEMA_NAME&quot;;
+	static public final String CAPTURE_DATE=&quot;CAST_CAPTURE_DATE&quot;;	
+	static public final String RETENTION_POLICY=&quot;CAST_SNAPSHOT_RETENTION_POLICY&quot;;	
+	static public final String SNAPSHOT_NAME=&quot;CAST_SNAPSHOT_NAME&quot;;	
+	static public final String WORK_FLOW=&quot;CAST_WORK_FLOW&quot;;
+
+	// build flags
+	static public final String RUN_BACKUP=&quot;CAST_RUN_BACKUP&quot;;
+	static public final String RUN_DELIVERY_APPLICATION=&quot;CAST_DELIVERY_APPLICATION&quot;;
+	static public final String RUN_ACCEPT_DELIVERY=&quot;CAST_ACCEPT_DELIVERY&quot;;
+	static public final String RUN_ANALYSIS=&quot;CAST_RUN_ANALYSIS&quot;;
+	static public final String REFERENCE_VERSION=&quot;CAST_REFERENCE_VERSION&quot;;
+	static public final String RUN_SNAPSHOT=&quot;CAST_RUN_SNAPSHOT&quot;;
+	static public final String RUN_VALIDATION=&quot;CAST_RUN_SNAPSHOT_VALIDATION&quot;;
+	static public final String RUN_PUBLISH_SNAPSHOT=&quot;CAST_PUBLISH_SNAPSHOT&quot;;
+	static public final String RUN_OPTIMIZE_DATABASE=&quot;CAST_OPTIMIZE_DATABASE&quot;;
+	static public final String RUN_ARCHIVE_DELIVERY=&quot;CAST_ARCHIVE_DELIVERY&quot;;	
+	static public final String RUN_JNLP_DELIVERY=&quot;CAST_RUN_JNLP_DELIVERY&quot;;	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.2.201409121644</span></div></body></html>

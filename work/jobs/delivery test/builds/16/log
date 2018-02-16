@@ -1,0 +1,23 @@
+Started by user [8mha:AAAAlh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAzOEgYu/dLi1CL9vNKcHACFIKlWvwAAAA==[0manonymous
+Building in workspace C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace
+Web Service: http://nkaw8lap:9898/CastBatchWebService
+[TODAY] = 2016/05/19 15:33:15
+Version Name with Tags: Version 2016-05-19_15-33-15
+
+Delivery Manager Tool
+Using arguments:
+	AddVersion
+	-application: Webgoat
+	-oneApplicationMode: 8f96d984-8019-4a83-91b3-c79cde217b53
+	-version: 5.0
+	-name: Version 2016-05-19_15-33-15
+	-releaseDate: 20160519153315
+	-storagePath: C:/CASTMS/Delivery737
+Log file: C:\Users\nka\AppData\Local\Temp/DMT.log.txt
+Running action: Automates the delivery of a version when the delivery is managed by more than one Delivery Manager. This is the first step in the process and is executed only by the first Delivery Manager. It copies an existing version.
+Return value: 0
+******************************
+Interrupted after: 5s
+java.lang.InterruptedException: sleep interrupted
+Build step 'Cast AIP - Delivery (WebService)' marked build as failure
+Finished: FAILURE

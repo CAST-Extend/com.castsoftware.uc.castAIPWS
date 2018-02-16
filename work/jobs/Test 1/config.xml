@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <com.castsoftware.jenkins.CastAIPWS.CastAIPBuilder plugin="CastAIPWS@4.2.2">
+      <dmtWebServiceAddress>http://localhost:9880/CastBatchWebService</dmtWebServiceAddress>
+      <cmsWebServiceAddress>https://usaicportal.castsoftware.com/HealthNet-CastBatchWebService73</cmsWebServiceAddress>
+      <appName>Automation Test Application</appName>
+      <versionName>Version [TODAY]</versionName>
+      <referenceVersion>V1</referenceVersion>
+      <castMSConnectionProfile>My CAST Storage Service profile</castMSConnectionProfile>
+      <schemaPrefix></schemaPrefix>
+      <aadSchemaName></aadSchemaName>
+      <retentionPolicy></retentionPolicy>
+      <lastRunDate>2017/01/11 09:12:46</lastRunDate>
+      <backup>false</backup>
+      <da>true</da>
+      <ad>false</ad>
+      <ra>false</ra>
+      <rs>false</rs>
+      <archive>false</archive>
+      <rav>false</rav>
+      <publish>false</publish>
+      <optimize>false</optimize>
+      <useJnlp>true</useJnlp>
+      <workFlow>Yes</workFlow>
+    </com.castsoftware.jenkins.CastAIPWS.CastAIPBuilder>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<build>
+  <actions>
+    <hudson.model.CauseAction>
+      <causes>
+        <hudson.model.Cause_-UserIdCause/>
+      </causes>
+    </hudson.model.CauseAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_DATE</key>
+      <value>2016/05/19 15:16:08</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>TODAY</key>
+      <value>2016/05/19 15:16:08</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_CMS_WEB_SERVICE_ADDRESS</key>
+      <value>http://nkaw8lap:9898/CastBatchWebService</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_APPL_NAME</key>
+      <value>Webgoat</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_APPL_VERSION</key>
+      <value>Version 2016-05-19_15-16-08</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_CONNECTION_PROFILE</key>
+      <value>version737</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_ACCEPT_DELIVERY</key>
+      <value>true</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_RUN_ANALYSIS</key>
+      <value>false</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_RUN_SNAPSHOT</key>
+      <value>false</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_ARCHIVE_DELIVERY</key>
+      <value>false</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+  </actions>
+  <queueId>1</queueId>
+  <timestamp>1463685367924</timestamp>
+  <startTime>1463685367945</startTime>
+  <result>FAILURE</result>
+  <duration>91444</duration>
+  <charset>windows-1252</charset>
+  <keepLog>false</keepLog>
+  <builtOn></builtOn>
+  <workspace>C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace</workspace>
+  <hudsonVersion>1.625.3</hudsonVersion>
+  <scm class="hudson.scm.NullChangeLogParser"/>
+  <culprits class="com.google.common.collect.EmptyImmutableSortedSet"/>
+</build>

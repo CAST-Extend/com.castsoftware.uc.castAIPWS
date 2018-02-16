@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<build>
+  <actions>
+    <hudson.model.ParametersAction>
+      <parameters>
+        <hudson.model.StringParameterValue>
+          <name>START_AT</name>
+          <description>Task # to start job at
+1. Deliver Application
+2. Accept Delivery
+3. Run Analysis
+4. Run Snapshot
+When starting from step 2 on the CAST_DATE is required</description>
+          <value>1</value>
+        </hudson.model.StringParameterValue>
+        <hudson.model.StringParameterValue>
+          <name>CAST_DATE</name>
+          <description>This field is required when restarting an analysis midstream.  It must be in the format of MM/dd/yyyy HH:mm:ss and match up with an existing delivery.
+2016/05/20 08:59:25</description>
+          <value></value>
+        </hudson.model.StringParameterValue>
+      </parameters>
+    </hudson.model.ParametersAction>
+    <hudson.model.CauseAction>
+      <causes>
+        <hudson.model.Cause_-UserIdCause/>
+      </causes>
+    </hudson.model.CauseAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_DATE</key>
+      <value>2016/05/20 17:09:51</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+    <com.castsoftware.jenkins.util.PublishEnvVarAction plugin="CastAIPWS@3.3">
+      <key>CAST_DMT_WEB_SERVICE_ADDRESS</key>
+      <value>http://nkaw8lap:9898/CastBatchWebService</value>
+    </com.castsoftware.jenkins.util.PublishEnvVarAction>
+  </actions>
+  <queueId>1</queueId>
+  <timestamp>1463778591432</timestamp>
+  <startTime>1463778591468</startTime>
+  <result>FAILURE</result>
+  <duration>102161</duration>
+  <charset>windows-1252</charset>
+  <keepLog>false</keepLog>
+  <builtOn></builtOn>
+  <workspace>C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace</workspace>
+  <hudsonVersion>1.625.3</hudsonVersion>
+  <scm class="hudson.scm.NullChangeLogParser"/>
+  <culprits class="com.google.common.collect.EmptyImmutableSortedSet"/>
+</build>

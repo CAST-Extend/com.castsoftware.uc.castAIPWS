@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>CastAIPAnalyzeBuilder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CAST Jenkins Plugin</a> &gt; <a href="index.source.html" class="el_package">com.castsoftware.jenkins.CastAIPWS</a> &gt; <span class="el_source">CastAIPAnalyzeBuilder.java</span></div><h1>CastAIPAnalyzeBuilder.java</h1><pre class="source lang-java linenums">package com.castsoftware.jenkins.CastAIPWS;
+import hudson.EnvVars;
+import hudson.Launcher;
+import hudson.model.BuildListener;
+import hudson.model.AbstractBuild;
+import hudson.tasks.Builder;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.Calendar;
+
+import javax.xml.rpc.ServiceException;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+
+import com.castsoftware.batch.CastWebService;
+import com.castsoftware.batch.CastWebServiceServiceLocator;
+import com.castsoftware.jenkins.CastAIPWS.util.Constants;
+import com.castsoftware.jenkins.CastAIPWS.util.Utils;
+import com.castsoftware.restapi.JsonResponse;
+import com.castsoftware.util.CastUtil;
+import com.google.gson.Gson;
+
+public class CastAIPAnalyzeBuilder extends Builder 
+{
+    // Fields in config.jelly must match the parameter names in the &quot;DataBoundConstructor&quot;
+    @DataBoundConstructor
+    public CastAIPAnalyzeBuilder() 
+<span class="nc" id="L29">    {</span>
+<span class="nc" id="L30">    }</span>
+     
+    @SuppressWarnings(&quot;rawtypes&quot;)
+	@Override
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException 
+    {
+    	int taskId;
+<span class="nc" id="L37">    	long startTime = System.nanoTime() ; </span>
+
+<span class="nc" id="L39">		EnvVars envVars = build.getEnvironment(listener);</span>
+		int startAt;
+		try {
+<span class="nc" id="L42">			startAt = Integer.parseInt(envVars.get(Constants.START_AT));</span>
+<span class="nc" id="L43">		} catch (NumberFormatException e) {</span>
+<span class="nc" id="L44">			startAt=0;</span>
+<span class="nc" id="L45">		}</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">    	if (startAt &gt; Constants.RunAnalysis) {</span>
+<span class="nc" id="L47">			listener.getLogger().println(&quot; &quot;);</span>
+<span class="nc" id="L48">			listener.getLogger().println(</span>
+					String.format(&quot;${START_AT} = %d, skipping run analysis step.&quot;, startAt));
+		} else {
+<span class="nc" id="L51">	   		listener.getLogger().println(&quot;&quot;);</span>
+<span class="nc" id="L52">	    	listener.getLogger().println(&quot;Run Analysis&quot;);</span>
+	
+<span class="nc" id="L54">	    	boolean failBuild = false;</span>
+			try {
+<span class="nc" id="L56">		    	String webServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);</span>
+<span class="nc" id="L57">		    	String castDate = envVars.get(Constants.CAST_DATE);</span>
+<span class="nc" id="L58">		    	String appName = envVars.get(Constants.APPLICATION_NAME);</span>
+<span class="nc" id="L59">		    	String dbPrefix = envVars.get(Constants.SCHEMA_PREFIX);</span>
+<span class="nc" id="L60">		    	String versionName = envVars.get(Constants.VERSION_NAME);</span>
+<span class="nc" id="L61">		    	String castMSConnectionProfile = envVars.get(Constants.CONNECTION_PROFILE);</span>
+<span class="nc" id="L62">		    	String workFlow = envVars.get(Constants.WORK_FLOW);</span>
+<span class="nc" id="L63">		    	failBuild = workFlow.trim().toLowerCase().equals(&quot;no&quot;);</span>
+	
+<span class="nc" id="L65">		        CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();</span>
+<span class="nc" id="L66">				cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);</span>
+<span class="nc" id="L67">				CastWebService cbws = cbwsl.getCastWebServicePort();</span>
+		    	
+<span class="nc" id="L69">				Calendar cal = Utils.convertCastDate(castDate);</span>
+				
+<span class="nc" id="L71">	        	startTime = System.nanoTime(); </span>
+<span class="nc" id="L72">	        	taskId = cbws.runAnalysis(appName, versionName,  castMSConnectionProfile, cal);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">	        	if (taskId &lt; 0)</span>
+	        	{
+<span class="nc" id="L75">	        		listener.getLogger().println(String.format(&quot;Error: %s&quot;,cbws.getErrorMessage(-taskId)));</span>
+<span class="nc" id="L76">	            	return false || failBuild;</span>
+	        	} else {
+<span class="nc" id="L78">	        		boolean runStatus = Utils.getLog(cbws,taskId,startTime,listener);</span>
+		        	
+<span class="nc" id="L80">	        		listener.getLogger().println(&quot; &quot;);</span>
+<span class="nc" id="L81">	        		listener.getLogger().println(&quot;Sending analyisis logs to Application Operations Portal&quot;);</span>
+	        		
+<span class="nc" id="L83">	        		String mngtDB = String.format(&quot;%s_mngt&quot;, dbPrefix);</span>
+<span class="nc" id="L84">	        		String rslt = cbws.sendAnalysisLogs(mngtDB,appName, castDate);</span>
+<span class="nc" id="L85">	        		JsonResponse response = new Gson().fromJson(rslt, JsonResponse.class);</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">	        		if (response.getCode() &lt; 0)</span>
+	        		{
+<span class="nc" id="L88">		        		listener.getLogger().println(&quot;Error sending analyisis logs to Application Operations Portal&quot;);</span>
+	        		}
+<span class="nc" id="L90">	        		listener.getLogger().println(response.getJsonString());</span>
+	        		
+<span class="nc" id="L92">	        		return runStatus;</span>
+	        	}
+	
+<span class="nc" id="L95">			} catch (IOException | ServiceException | ParseException e) {</span>
+<span class="nc" id="L96">				listener.getLogger().println(</span>
+						String.format(&quot;Interrupted after: %s\n%s: %s&quot;, 
+								CastUtil.formatNanoTime(System.nanoTime() - startTime),
+								e.getClass().getName(),  
+								e.getMessage()));
+<span class="nc" id="L101">				return false || failBuild;</span>
+			}
+		}  
+		//are there any remaining steps to run, if so run them now
+<span class="nc bnc" id="L105" title="All 2 branches missed.">		if (!Utils.runJobs(build, launcher, listener, this.getClass(), Constants.RunAnalysis))</span>
+		{
+<span class="nc" id="L107">			return false;</span>
+		}
+<span class="nc" id="L109">    	return true;</span>
+    }
+    
+    /**
+     * Descriptor for {@link CastAIPBuilder}. Used as a singleton.
+     * The class is marked as public so that it can be accessed from views.
+     *
+     * &lt;p&gt;
+     * See &lt;tt&gt;src/main/resources/hudson/plugins/hello_world/CastDMTBuilder/*.jelly&lt;/tt&gt;
+     * for the actual HTML fragment for the configuration screen.
+     */
+//    @Extension // This indicates to Jenkins that this is an implementation of an extension point.
+//    public static final class DescriptorImpl extends BuildStepDescriptor&lt;Builder&gt; 
+//    {
+//
+//        private boolean useDMT;
+//
+//        public DescriptorImpl() {
+//            load();
+//        }
+//
+//         @SuppressWarnings(&quot;rawtypes&quot;)
+//		public boolean isApplicable(Class&lt;? extends AbstractProject&gt; aClass) {
+//            // Indicates that this builder can be used with all kinds of project types 
+//            return true;
+//        }
+//
+//        /**
+//         * This human readable name is used in the configuration screen.
+//         */
+//        public String getDisplayName() {
+//			return &quot;&quot;;
+////			return String.format(&quot;CAST AIP %d: Analyze Application&quot;, Constants.RunAnalysis)  ;
+//        }        
+// 
+//        @Override
+//        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+//        	useDMT = formData.getBoolean(&quot;useDMT&quot;);
+//            save();
+//            return super.configure(req,formData);
+//        }
+//
+//        public boolean getUseDMT() {
+//            return useDMT;
+//        }
+//    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.2.201409121644</span></div></body></html>

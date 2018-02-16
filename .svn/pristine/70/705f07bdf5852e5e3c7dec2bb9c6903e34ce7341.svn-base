@@ -1,0 +1,12 @@
+package com.castsoftware.jenkins.CastAIPWS;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+
+public class ArchiveBlock {
+
+    @DataBoundConstructor
+    public ArchiveBlock()
+    {
+
+    }
+}

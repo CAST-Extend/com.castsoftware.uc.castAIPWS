@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Utils.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CAST Jenkins Plugin</a> &gt; <a href="index.source.html" class="el_package">com.castsoftware.jenkins.CastAIPWS.util</a> &gt; <span class="el_source">Utils.java</span></div><h1>Utils.java</h1><pre class="source lang-java linenums">package com.castsoftware.jenkins.CastAIPWS.util;
+
+import hudson.EnvVars;
+import hudson.Launcher;
+import hudson.XmlFile;
+import hudson.model.*;
+import hudson.model.BuildListener;
+import hudson.tasks.Builder;
+import jenkins.model.*;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.rmi.RemoteException;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+
+import org.apache.axis.AxisFault;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
+
+import com.castsoftware.batch.CastWebService;
+import com.castsoftware.exception.HelperException;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPAcceptBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPAnalyzeBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPArchiveDeliveryBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPCSSBackupBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPDeliverBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPFinalBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPOptimizeDatabaseBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPPublishBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPSnapshotBuilder;
+import com.castsoftware.jenkins.CastAIPWS.CastAIPValidationBuilder;
+import com.castsoftware.util.CastUtil;
+import com.castsoftware.util.VersionInfo;
+import com.castsoftware.webservice.RemoteHelper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+<span class="nc" id="L47">public class Utils</span>
+{
+
+	static public boolean runJobs(AbstractBuild build, Launcher launcher, BuildListener listener, Class thisClass,
+			int currentStep) throws IOException, InterruptedException
+	{
+<span class="nc" id="L53">		StackTraceElement[] elementList = Thread.currentThread().getStackTrace();</span>
+<span class="nc bnc" id="L54" title="All 4 branches missed.">		if (elementList.length &gt; 3 &amp;&amp; elementList[3].getMethodName().equals(&quot;runJobs&quot;)) return true;</span>
+
+<span class="nc bnc" id="L56" title="All 2 branches missed.">		for (Builder b : Utils.getBuilderList(Utils.getJobTaskList(build, listener), build, listener, currentStep,</span>
+				thisClass)) {
+
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			if (!b.perform(build, launcher, listener)) {</span>
+<span class="nc" id="L60">				return false;</span>
+			}
+<span class="nc" id="L62">		}</span>
+<span class="nc" id="L63">		return true;</span>
+	}
+
+	static public List&lt;Element&gt; getJobTaskList(AbstractBuild build, BuildListener listener) throws IOException,
+			InterruptedException
+	{
+<span class="nc" id="L69">		List&lt;Element&gt; retList = new ArrayList&lt;Element&gt;();</span>
+
+		// EnvVars envVars = build.getEnvironment(listener);
+<span class="nc" id="L72">		String jobName = build.getProject().getName();</span>
+
+<span class="nc" id="L74">		AbstractProject thisJob = null;</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">		for (AbstractProject prj : Jenkins.getInstance().getAllItems(AbstractProject.class)) {</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">			if (prj.getDisplayName().equalsIgnoreCase(jobName)) {</span>
+<span class="nc" id="L77">				thisJob = prj;</span>
+<span class="nc" id="L78">				break;</span>
+			}
+<span class="nc" id="L80">		}</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">		if (thisJob != null) {</span>
+<span class="nc" id="L82">			XmlFile config = thisJob.getConfigFile();</span>
+<span class="nc" id="L83">			SAXBuilder builder = new SAXBuilder();</span>
+
+			Document document;
+			try {
+<span class="nc" id="L87">				document = builder.build(config.getFile());</span>
+<span class="nc" id="L88">				Element bldrs = Utils.findElement(document.getRootElement(), &quot;builders&quot;);</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">				if (bldrs != null) {</span>
+<span class="nc" id="L90">					List&lt;Element&gt; bldrList = bldrs.getChildren();</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">					for (Element el : bldrList) {</span>
+<span class="nc" id="L92">						String name = el.getName();</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">						if (name.contains(&quot;.CastAIPWS.&quot;)) {</span>
+<span class="nc" id="L94">							retList.add(el);</span>
+						}
+<span class="nc" id="L96">					}</span>
+				}
+<span class="nc" id="L98">			} catch (JDOMException e) {</span>
+				// TODO Auto-generated catch block
+<span class="nc" id="L100">				e.printStackTrace();</span>
+<span class="nc" id="L101">			}</span>
+<span class="nc" id="L102">		} else {</span>
+<span class="nc" id="L103">			listener.getLogger().println(String.format(&quot;Error locating job configuration: %s&quot;,jobName));</span>
+		}
+<span class="nc" id="L105">		return retList;</span>
+	}
+
+	static public List&lt;Builder&gt; getBuilderList(List&lt;Element&gt; taskList, AbstractBuild build, BuildListener listener,
+			int currentStep, Class thisClass) throws IOException, InterruptedException
+	{
+<span class="nc" id="L111">		List&lt;Builder&gt; builders = new ArrayList&lt;Builder&gt;();</span>
+<span class="nc" id="L112">		EnvVars envVars = build.getEnvironment(listener);</span>
+
+<span class="nc" id="L114">		boolean backup = Boolean.parseBoolean(envVars.get(Constants.RUN_BACKUP));</span>
+<span class="nc" id="L115">		boolean da = Boolean.parseBoolean(envVars.get(Constants.RUN_DELIVERY_APPLICATION));</span>
+<span class="nc" id="L116">		boolean ad = Boolean.parseBoolean(envVars.get(Constants.RUN_ACCEPT_DELIVERY));</span>
+<span class="nc" id="L117">		boolean ra = Boolean.parseBoolean(envVars.get(Constants.RUN_ANALYSIS));</span>
+<span class="nc" id="L118">		boolean rs = Boolean.parseBoolean(envVars.get(Constants.RUN_SNAPSHOT));</span>
+<span class="nc" id="L119">		boolean archive = Boolean.parseBoolean(envVars.get(Constants.RUN_ARCHIVE_DELIVERY));</span>
+<span class="nc" id="L120">		boolean rav = Boolean.parseBoolean(envVars.get(Constants.RUN_VALIDATION));</span>
+<span class="nc" id="L121">		boolean publish = Boolean.parseBoolean(envVars.get(Constants.RUN_PUBLISH_SNAPSHOT));</span>
+<span class="nc" id="L122">		boolean optimize = Boolean.parseBoolean(envVars.get(Constants.RUN_OPTIMIZE_DATABASE));</span>
+
+<span class="nc bnc" id="L124" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunBackup &amp;&amp; backup</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPCSSBackupBuilder.class, thisClass)) {
+<span class="nc" id="L126">			builders.add(new CastAIPCSSBackupBuilder());</span>
+<span class="nc bnc" id="L127" title="All 4 branches missed.">		} else if (backup &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L128">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L131" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunDMT &amp;&amp; da &amp;&amp; Utils.canRunTask(taskList, CastAIPDeliverBuilder.class, thisClass)) {</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPCSSBackupBuilder.class, thisClass)) {</span>
+<span class="nc" id="L133">				builders.add(new CastAIPDeliverBuilder());</span>
+			} else {
+<span class="nc" id="L135">				return builders;</span>
+			}
+<span class="nc bnc" id="L137" title="All 4 branches missed.">		} else if (ad &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L138">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L141" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunAcceptDelivery &amp;&amp; ad</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPAcceptBuilder.class, thisClass)) {
+<span class="nc bnc" id="L143" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPDeliverBuilder.class, thisClass)) {</span>
+<span class="nc" id="L144">				builders.add(new CastAIPAcceptBuilder());</span>
+			} else {
+<span class="nc" id="L146">				return builders;</span>
+			}
+<span class="nc bnc" id="L148" title="All 4 branches missed.">		} else if (ad &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L149">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L152" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunAnalysis &amp;&amp; ra</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPAnalyzeBuilder.class, thisClass)) {
+<span class="nc bnc" id="L154" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPAcceptBuilder.class, thisClass)) {</span>
+<span class="nc" id="L155">				builders.add(new CastAIPAnalyzeBuilder());</span>
+			} else {
+<span class="nc" id="L157">				return builders;</span>
+			}
+<span class="nc bnc" id="L159" title="All 4 branches missed.">		} else if (ra &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L160">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L163" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunSnapshot &amp;&amp; rs</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPSnapshotBuilder.class, thisClass)) {
+<span class="nc bnc" id="L165" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPAnalyzeBuilder.class, thisClass)) {</span>
+<span class="nc" id="L166">				builders.add(new CastAIPSnapshotBuilder());</span>
+			} else {
+<span class="nc" id="L168">				return builders;</span>
+			}
+<span class="nc bnc" id="L170" title="All 4 branches missed.">		} else if (rs &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L171">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L174" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunValidation &amp;&amp; rav</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPValidationBuilder.class, thisClass)) {
+<span class="nc bnc" id="L176" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPSnapshotBuilder.class, thisClass)) {</span>
+<span class="nc" id="L177">				builders.add(new CastAIPValidationBuilder());</span>
+			} else {
+<span class="nc" id="L179">				return builders;</span>
+			}
+<span class="nc bnc" id="L181" title="All 4 branches missed.">		} else if (rav &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L182">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L185" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunPublishAAD &amp;&amp; publish</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPPublishBuilder.class, thisClass)) {
+<span class="nc bnc" id="L187" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPValidationBuilder.class, thisClass)) {</span>
+<span class="nc" id="L188">				builders.add(new CastAIPPublishBuilder());</span>
+			} else {
+<span class="nc" id="L190">				return builders;</span>
+			}
+<span class="nc bnc" id="L192" title="All 4 branches missed.">		} else if (publish &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L193">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L196" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunDatabaseOptimize &amp;&amp; optimize</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPOptimizeDatabaseBuilder.class, thisClass)) {
+<span class="nc bnc" id="L198" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPPublishBuilder.class, thisClass)) {</span>
+<span class="nc" id="L199">				builders.add(new CastAIPOptimizeDatabaseBuilder());</span>
+			} else {
+<span class="nc" id="L201">				return builders;</span>
+			}
+<span class="nc bnc" id="L203" title="All 4 branches missed.">		} else if (optimize &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L204">			return builders;</span>
+		}
+
+<span class="nc bnc" id="L207" title="All 6 branches missed.">		if (currentStep &lt; Constants.RunArchiveDelivery &amp;&amp; archive</span>
+				&amp;&amp; Utils.canRunTask(taskList, CastAIPArchiveDeliveryBuilder.class, thisClass)) {
+<span class="nc bnc" id="L209" title="All 2 branches missed.">			if (Utils.canRunTask(taskList, CastAIPOptimizeDatabaseBuilder.class, thisClass)) {</span>
+<span class="nc" id="L210">				builders.add(new CastAIPArchiveDeliveryBuilder());</span>
+			} else {
+<span class="nc" id="L212">				return builders;</span>
+			}
+<span class="nc bnc" id="L214" title="All 4 branches missed.">		} else if (archive &amp;&amp; builders.size() &gt; 0) {</span>
+<span class="nc" id="L215">			return builders;</span>
+		}
+
+<span class="nc" id="L218">		builders.add(new CastAIPFinalBuilder());</span>
+<span class="nc" id="L219">		return builders;</span>
+	}
+
+	static public Element findElement(Element current, String elementName)
+	{
+<span class="nc bnc" id="L224" title="All 2 branches missed.">		if (current.getName() == elementName) {</span>
+<span class="nc" id="L225">			return current;</span>
+		}
+<span class="nc" id="L227">		List children = current.getChildren();</span>
+<span class="nc" id="L228">		Iterator iterator = children.iterator();</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">		while (iterator.hasNext()) {</span>
+<span class="nc" id="L230">			Element child = (Element) iterator.next();</span>
+<span class="nc" id="L231">			Element tempElement = findElement(child, elementName);</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">			if (tempElement != null) {</span>
+<span class="nc" id="L233">				return tempElement;</span>
+			}
+<span class="nc" id="L235">		}</span>
+		// Didn't find the element anywhere.
+<span class="nc" id="L237">		return null;</span>
+	}
+
+	static public boolean canRunTask(List&lt;Element&gt; taskList, Class lookFor, Class base)
+	{
+<span class="nc" id="L242">		Boolean found = false;</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">		for (Element el : taskList) {</span>
+<span class="nc bnc" id="L244" title="All 2 branches missed.">			if (el.getName().equals(base.getName())) continue;</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">			if (lookFor.getName().equals(el.getName())) {</span>
+<span class="nc" id="L246">				found = true;</span>
+<span class="nc" id="L247">				break;</span>
+			}
+<span class="nc" id="L249">		}</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">		return !found;</span>
+	}
+
+	static public boolean validateBuildVariables(AbstractBuild build, BuildListener listener)
+	{
+<span class="nc" id="L255">		boolean rslt = true;</span>
+		EnvVars envVars;
+		try {
+<span class="nc" id="L258">			envVars = build.getEnvironment(listener);</span>
+			// make sure everything is set properly
+<span class="nc bnc" id="L260" title="All 2 branches missed.">			if (envVars.get(Constants.DMT_WEB_SERVICE_ADDRESS).isEmpty()) {</span>
+<span class="nc" id="L261">				listener.getLogger().printf(&quot;%s is not set&quot;, Constants.DMT_WEB_SERVICE_ADDRESS);</span>
+<span class="nc" id="L262">				rslt = false;</span>
+			}
+<span class="nc bnc" id="L264" title="All 2 branches missed.">			if (envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS).isEmpty()) {</span>
+<span class="nc" id="L265">				listener.getLogger().printf(&quot;%s is not set&quot;, Constants.CMS_WEB_SERVICE_ADDRESS);</span>
+<span class="nc" id="L266">				rslt = false;</span>
+			}
+<span class="nc bnc" id="L268" title="All 2 branches missed.">			if (envVars.get(Constants.VERSION_NAME).isEmpty()) {</span>
+<span class="nc" id="L269">				listener.getLogger().printf(&quot;%s is not set&quot;, Constants.VERSION_NAME);</span>
+<span class="nc" id="L270">				rslt = false;</span>
+			}
+<span class="nc bnc" id="L272" title="All 2 branches missed.">			if (envVars.get(Constants.CONNECTION_PROFILE).isEmpty()) {</span>
+<span class="nc" id="L273">				listener.getLogger().printf(&quot;%s is not set&quot;, Constants.CONNECTION_PROFILE);</span>
+<span class="nc" id="L274">				rslt = false;</span>
+			}
+			// if (envVars.get(Constants.CAPTURE_DATE).isEmpty()) {
+			// listener.getLogger().printf(&quot;%s is not set&quot;,
+			// Constants.CAPTURE_DATE);
+			// rslt = false;
+			// }
+<span class="nc bnc" id="L281" title="All 2 branches missed.">			if (envVars.get(Constants.SNAPSHOT_NAME).isEmpty()) {</span>
+<span class="nc" id="L282">				listener.getLogger().printf(&quot;%s is not set&quot;, Constants.SNAPSHOT_NAME);</span>
+<span class="nc" id="L283">				rslt = false;</span>
+			}
+			// if (envVars.get(Constants.TODAY).isEmpty()) {
+			// listener.getLogger().printf(&quot;%s is not set&quot;, Constants.TODAY);
+			// rslt = false;
+			// }
+<span class="nc bnc" id="L289" title="All 2 branches missed.">			if (envVars.get(Constants.WORK_FLOW).isEmpty()) {</span>
+<span class="nc" id="L290">				listener.getLogger().printf(&quot;%s is not set&quot;, Constants.WORK_FLOW);</span>
+<span class="nc" id="L291">				rslt = false;</span>
+			}
+<span class="nc" id="L293">		} catch (IOException | InterruptedException e) {</span>
+<span class="nc" id="L294">			listener.getLogger().println(e.getMessage());</span>
+<span class="nc" id="L295">			rslt = false;</span>
+<span class="nc" id="L296">		}</span>
+<span class="nc" id="L297">		return rslt;</span>
+	}
+
+	static public boolean getLog(CastWebService cbws, int taskId, long startTime, BuildListener listener)
+	{
+		int returnCode;
+		int feedbackCounter;
+		int logIndex;
+		String logString;
+<span class="nc" id="L306">		Gson gson = new Gson();</span>
+<span class="nc" id="L307">		Type collectionType = new TypeToken&lt;Collection&lt;String&gt;&gt;()</span>
+<span class="nc" id="L308">		{</span>
+		}.getType();
+		Collection&lt;String&gt; tmp;
+		List&lt;String&gt; logLines;
+
+		try {
+<span class="nc" id="L314">			feedbackCounter = 0;</span>
+<span class="nc" id="L315">			logIndex = 0;</span>
+<span class="nc" id="L316">			int retryCount = 0;</span>
+			while (true)
+			{
+				try 
+				{
+					do {
+						// Get Log
+<span class="nc" id="L323">						Thread.sleep(1000);</span>
+						
+<span class="nc" id="L325">						logString = cbws.getTaskOutput(taskId, logIndex);</span>
+<span class="nc" id="L326">						tmp = gson.fromJson(logString, collectionType);</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">						if (tmp != null) {</span>
+<span class="nc" id="L328">							logLines = new ArrayList&lt;String&gt;(tmp);</span>
+<span class="nc" id="L329">							logIndex += logLines.size();</span>
+<span class="nc bnc" id="L330" title="All 2 branches missed.">							for (String s : logLines)</span>
+<span class="nc" id="L331">								listener.getLogger().println(s);</span>
+		
+<span class="nc" id="L333">							feedbackCounter++;</span>
+<span class="nc bnc" id="L334" title="All 2 branches missed.">							if (feedbackCounter % 300 == 0)</span>
+<span class="nc" id="L335">								listener.getLogger().println(</span>
+										String.format(&quot; %s...&quot;, CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+						}
+<span class="nc bnc" id="L338" title="All 2 branches missed.">					} while (cbws.isTaskRunning(taskId));</span>
+<span class="nc" id="L339">					break;</span>
+<span class="nc" id="L340">				} catch (AxisFault af) {</span>
+<span class="nc" id="L341">					retryCount++;</span>
+<span class="nc bnc" id="L342" title="All 2 branches missed.">					if (retryCount&lt;3)</span>
+					{
+<span class="nc" id="L344">						listener.getLogger().printf(&quot;%d Access fault encountered\n&quot;,retryCount);</span>
+					}
+//					} else {
+//				 	 	listener.getLogger().println(&quot;Aborting, too many access faults encounterd.&quot;);
+//				 	 	return false;
+//					}
+<span class="nc" id="L350">				}</span>
+			}
+			
+			// Get Log
+<span class="nc" id="L354">			 retryCount = 0;</span>
+			 while (true)
+			{
+				try 
+				{
+<span class="nc" id="L359">					logString = cbws.getTaskOutput(taskId, logIndex);</span>
+<span class="nc" id="L360">					tmp = gson.fromJson(logString, collectionType);</span>
+<span class="nc bnc" id="L361" title="All 2 branches missed.">					if (tmp != null) {</span>
+<span class="nc" id="L362">						logLines = new ArrayList&lt;String&gt;(tmp);</span>
+<span class="nc" id="L363">						logIndex += logLines.size();</span>
+<span class="nc bnc" id="L364" title="All 2 branches missed.">						for (String s : logLines)</span>
+<span class="nc" id="L365">							listener.getLogger().println(s);</span>
+					}
+<span class="nc" id="L367">					break;</span>
+<span class="nc" id="L368">				} catch (AxisFault af) {</span>
+<span class="nc" id="L369">					retryCount++;</span>
+<span class="nc bnc" id="L370" title="All 2 branches missed.">					if (retryCount&lt;3)</span>
+					{
+<span class="nc" id="L372">						listener.getLogger().printf(&quot;%d Access fault encountered\n&quot;,retryCount);</span>
+					}
+//					} else {
+//				 	 	listener.getLogger().println(&quot;Aborting, too many access faults encountered.&quot;);
+//				 	 	return false;
+//					}
+<span class="nc" id="L378">				}</span>
+			}
+			
+<span class="nc" id="L381">			listener.getLogger().println(</span>
+					String.format(&quot;Duration: %s&quot;, CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+
+<span class="nc" id="L384">			returnCode = cbws.getTaskExitValue(taskId);</span>
+
+<span class="nc" id="L386">			listener.getLogger().println(String.format(&quot;Return Code: %d&quot;, returnCode));</span>
+<span class="nc" id="L387">		} catch (RemoteException | InterruptedException e) {</span>
+<span class="nc" id="L388">			listener.getLogger().printf(&quot;Web Service Connection Error: %s&quot;, e.getMessage());</span>
+<span class="nc" id="L389">			return false;</span>
+<span class="nc" id="L390">		}</span>
+
+<span class="nc" id="L392">		listener.getLogger().println(&quot; &quot;);</span>
+
+<span class="nc bnc" id="L394" title="All 2 branches missed.">		return (returnCode == 0) ? true : false;</span>
+	}
+
+	static public boolean validateWebServiceVersion(String webServiceAddress, BuildListener listener)
+			throws HelperException
+	{
+<span class="nc" id="L400">		VersionInfo vi = RemoteHelper.getVersionInfo(webServiceAddress);</span>
+<span class="nc bnc" id="L401" title="All 2 branches missed.">		if (Constants.wsVersionCompatibility.equals(vi.getVersion())) {</span>
+<span class="nc" id="L402">			return true;</span>
+		} else {
+<span class="nc" id="L404">			listener.getLogger().println(</span>
+					String.format(&quot;Incompatible Web Service Version %s (Supported: %s)&quot;, vi.getVersion(),
+							Constants.wsVersionCompatibility));
+<span class="nc" id="L407">			return false;</span>
+		}
+	}
+
+	static public Calendar convertCastDate(String castDate) throws ParseException
+	{
+<span class="nc" id="L413">		Calendar cal = Calendar.getInstance();</span>
+<span class="nc" id="L414">		Date dateForToday = Constants.castDateFormat.parse(castDate);</span>
+<span class="nc" id="L415">		cal.setTime(dateForToday);</span>
+<span class="nc" id="L416">		return cal;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.2.201409121644</span></div></body></html>

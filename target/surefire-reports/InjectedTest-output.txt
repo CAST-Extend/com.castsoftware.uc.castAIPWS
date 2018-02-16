@@ -1,0 +1,33 @@
+Exploding C:\Users\nka\.m2\repository\org\jenkins-ci\main\jenkins-war\1.625.3\jenkins-war-1.625.3-war-for-test.jar into C:\Users\nka\OneDrive\CAST\Projects\CastAIPWS\target\jenkins-for-test
+Jan 27, 2017 2:45:37 PM org.mortbay.log.Slf4jLog info
+INFO: Logging to org.slf4j.impl.JDK14LoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+Jan 27, 2017 2:45:37 PM org.mortbay.log.Slf4jLog info
+INFO: jetty-6.1.26
+Jan 27, 2017 2:45:37 PM org.mortbay.log.Slf4jLog info
+INFO: NO JSP Support for , did not find org.apache.jasper.servlet.JspServlet
+Jan 27, 2017 2:45:37 PM org.mortbay.log.Slf4jLog info
+INFO: Started SocketConnector@0.0.0.0:62305
+Jan 27, 2017 2:45:38 PM jenkins.InitReactorRunner$1 onAttained
+INFO: Started initialization
+Jan 27, 2017 2:46:18 PM jenkins.InitReactorRunner$1 onAttained
+INFO: Listed all plugins
+Jan 27, 2017 2:46:18 PM jenkins.InitReactorRunner$1 onAttained
+INFO: Prepared all plugins
+Jan 27, 2017 2:46:19 PM jenkins.InitReactorRunner$1 onAttained
+INFO: Started all plugins
+Jan 27, 2017 2:46:19 PM jenkins.InitReactorRunner$1 onAttained
+INFO: Augmented all extensions
+Jan 27, 2017 2:46:28 PM jenkins.InitReactorRunner$1 onAttained
+INFO: Loaded all jobs
+Jan 27, 2017 2:46:32 PM org.jenkinsci.main.modules.sshd.SSHD start
+INFO: Started SSHD at port 62318
+Jan 27, 2017 2:46:32 PM jenkins.InitReactorRunner$1 onAttained
+INFO: Completed initialization
+Jan 27, 2017 2:46:32 PM org.mortbay.log.Slf4jLog info
+INFO: jetty-6.1.26
+Jan 27, 2017 2:46:32 PM org.mortbay.log.Slf4jLog info
+INFO: Started SocketConnector@0.0.0.0:62320
+Jan 27, 2017 2:46:42 PM org.mortbay.log.Slf4jLog info
+INFO: Stopped SocketConnector@0.0.0.0:62305
+WARN: The method class org.apache.commons.logging.impl.SLF4JLogFactory#release() was invoked.
+WARN: Please see http://www.slf4j.org/codes.html#release for an explanation.

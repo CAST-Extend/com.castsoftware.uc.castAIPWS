@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<build>
+  <actions>
+    <hudson.model.ParametersAction>
+      <parameters>
+        <hudson.model.StringParameterValue>
+          <name>CAST_DATE</name>
+          <description>This field is required when restarting an analysis midstream.  It must be in the format of MM/dd/yyyy HH:mm:ss and match up with an existing delivery.
+2016/05/20 08:59:25</description>
+          <value></value>
+        </hudson.model.StringParameterValue>
+      </parameters>
+    </hudson.model.ParametersAction>
+    <hudson.model.CauseAction>
+      <causes>
+        <hudson.model.Cause_-UserIdCause/>
+      </causes>
+    </hudson.model.CauseAction>
+  </actions>
+  <queueId>4</queueId>
+  <timestamp>1463754776169</timestamp>
+  <startTime>1463754776185</startTime>
+  <result>FAILURE</result>
+  <duration>859</duration>
+  <charset>windows-1252</charset>
+  <keepLog>false</keepLog>
+  <builtOn></builtOn>
+  <workspace>C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace</workspace>
+  <hudsonVersion>1.625.3</hudsonVersion>
+  <scm class="hudson.scm.NullChangeLogParser"/>
+  <culprits class="com.google.common.collect.EmptyImmutableSortedSet"/>
+</build>

@@ -1,0 +1,25 @@
+package com.castsoftware.jenkins.CastAIPWS.util;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+
+public class RsBlock {
+    private final String snapshotName;
+    private final String captureDate;
+
+    @DataBoundConstructor
+    public RsBlock(
+    		String snapshotName,
+    		String captureDate)
+    {
+        this.snapshotName = snapshotName;
+        this.captureDate = captureDate;
+    }
+    
+    public String getSnapshotName() {
+        return snapshotName;
+    }
+    
+    public String getCaptureDate() {
+        return captureDate;
+    }
+}

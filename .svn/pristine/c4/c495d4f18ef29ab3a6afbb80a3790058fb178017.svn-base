@@ -1,0 +1,729 @@
+package com.castsoftware.jenkins.CastAIPWS;
+import hudson.EnvVars;
+import hudson.Extension;
+import hudson.Launcher;
+import hudson.model.BuildListener;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.Builder;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.rmi.RemoteException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.List;
+import java.util.Locale;
+
+import javax.servlet.ServletException;
+import javax.xml.rpc.ServiceException;
+
+import net.sf.json.JSONObject;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+
+import com.castsoftware.batch.CastWebService;
+import com.castsoftware.batch.CastWebServiceServiceLocator;
+import com.castsoftware.exception.HelperException;
+import com.castsoftware.jenkins.util.EnvTemplater;
+import com.castsoftware.profiles.ConnectionProfile;
+import com.castsoftware.util.CastUtil;
+import com.castsoftware.util.VersionInfo;
+import com.castsoftware.webservice.RemoteHelper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+public class CastCMSBuilder extends Builder 
+{
+	private EnvVars envVars = null;
+	private final DateFormat dateFormatVersion = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+	
+	private final String wsVersionCompatibility = "1.2";
+	
+    private final String webServiceAddress;
+    private final String appName;
+    private final String versionName;
+    private final String castMSConnectionProfile;    
+    
+    private final boolean ad;
+
+    private final boolean ra;
+    private final boolean rs;
+    private final boolean archive;
+    private final String snapshotName;
+    private final String captureDate;
+    private final String workFlow;
+
+    // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
+    @DataBoundConstructor
+    public CastCMSBuilder(
+    		String webServiceAddress, 
+    		String appName,
+    		String versionName, 
+    		String castMSConnectionProfile,
+    		AdBlock adBlock, 
+    		RaBlock raBlock, 
+    		RsBlock rsBlock,
+    		ArchiveBlock archiveBlock,
+    		String workFlow) {
+        this.webServiceAddress = webServiceAddress;
+        this.appName = appName;
+        this.versionName = versionName;
+        this.castMSConnectionProfile = castMSConnectionProfile;
+        this.workFlow = workFlow;
+        
+        //Accept Delivery
+        if (adBlock != null)
+        {
+        	this.ad = true;
+        }
+        else
+        {
+        	this.ad = false;
+   	
+        }
+        
+        //Run Analysis
+        if (raBlock != null)
+        {
+        	this.ra = true;
+        }
+        else
+        {
+        	this.ra = false;     	
+        }
+        
+        //Run Snapshot
+        if (rsBlock != null)
+        {
+        	this.rs = true;
+        	this.snapshotName = rsBlock.getSnapshotName();
+        	this.captureDate = rsBlock.getCaptureDate();
+        }
+        else
+        {
+        	this.rs = false;
+        	this.snapshotName = ""; 
+        	this.captureDate = "";
+        }
+        
+        //Archive Delivery
+        if (archiveBlock != null)
+        {
+        	this.archive = true;
+        }
+        else
+        {
+        	this.archive = false;     	
+        }
+    }    
+
+    private Boolean checkWebServiceCompatibility(String version)
+    {
+    	return wsVersionCompatibility.equals(version);
+    }
+    
+    public String getWebServiceAddress() {
+        return webServiceAddress;
+    }
+    
+    public String getAppName() {
+        return appName;
+    }
+ 
+    public String getVersionName() {
+        return versionName;
+    }    
+    
+    public String getCastMSConnectionProfile() {
+        return castMSConnectionProfile;
+    }
+    
+    public boolean isAd() {
+        return ad;
+    }
+
+    public boolean isRa() {
+        return ra;
+    }
+
+    public boolean isRs() {
+        return rs;
+    }
+    
+    public boolean isArchive() {
+        return archive;
+    }
+    
+    public String getSnapshotName() {
+        return snapshotName;
+    }
+    
+    public String getCaptureDate() {
+        return captureDate;
+    }
+    
+    private Date getCaptureDateAsDate(Date date) throws ParseException
+    {
+    	if (captureDate.equals("[TODAY]"))
+    		return date;
+    	else    	
+    		return new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.ENGLISH).parse(captureDate);
+    }
+	
+    public String getVersionNameWithTag(Date date, EnvVars envVars)
+    {
+    	String s = versionName.replace("[TODAY]", dateFormatVersion.format(date));
+		EnvTemplater jEnv=new EnvTemplater(envVars);
+		s = jEnv.templateString(s);
+
+    	
+/**    	
+    	Pattern p = Pattern.compile("\\[([A-za-z0-9_]+)\\]");
+		Matcher m = p.matcher(s);
+    	
+		while (m.find()) 
+		{
+			value = envVars.get(m.group(1));
+			if (value != null)
+				s = s.replace(m.group(), value);
+		}		
+**/		
+    	return s;
+    } 
+       
+    public String getSnapshotNameWithTag(Date date, EnvVars envVars)
+    {
+    	String s = snapshotName.replace("[TODAY]", dateFormatVersion.format(date));
+    	String value = "";
+		EnvTemplater jEnv=new EnvTemplater(envVars);
+		s = jEnv.templateString(s);
+
+/**    	
+    	Pattern p = Pattern.compile("\\[([A-za-z0-9_]+)\\]");
+		Matcher m = p.matcher(s);
+    	
+		while (m.find()) 
+		{
+			value = envVars.get(m.group(1));
+			if (value != null)
+				s = s.replace(m.group(), value);
+		}	
+**/
+    	return s;    	
+    }    
+    
+	public String getWorkFlow()
+	{
+		return workFlow;
+	}
+	
+	private String getCastTimeStamp() throws ServiceException
+	{
+		String castDate=null;
+		if (envVars != null)
+		{
+			castDate = envVars.get("CAST_DATE");
+		}
+	    if (castDate == null) 
+		{
+	    	throw new ServiceException("CAST_DATE is not set");
+		}
+		return castDate;
+	}
+
+    public FormValidation doTestConnection(@QueryParameter("webServiceAddress") final String webServiceAddress) throws IOException, ServletException 
+    {
+    	try {   		       		
+    		return FormValidation.ok(String.format("Success (%s)", RemoteHelper.getVersionInfo(webServiceAddress).toString()));
+    		
+        } catch (HelperException e) {
+        	return FormValidation.error(String.format("%s: %s", e.getClass().getName(), e.getMessage()));
+		} 
+    }
+
+    public ListBoxModel doFillAppNameItems(
+    		@QueryParameter("webServiceAddress") final String webServiceAddress) 
+    {
+    	ListBoxModel m = new ListBoxModel();
+    	
+        try {
+        	Collection<String> apps = RemoteHelper.listApplications(webServiceAddress);
+    		
+        	for(String app : apps)
+        	{
+        		m.add(app);
+        	}        		
+    		
+        }  catch (HelperException e) {
+	    	return m;
+		}
+        return m;
+    } 
+	
+    public ListBoxModel doFillCastMSConnectionProfileItems(
+    		@QueryParameter("webServiceAddress") final String webServiceAddress) 
+    {
+    	ListBoxModel m = new ListBoxModel();
+    	
+        try {
+        	Collection<ConnectionProfile> cpList = RemoteHelper.listConnectionProfiles(webServiceAddress);
+    		
+        	for(ConnectionProfile cp : cpList)
+        	{
+        		m.add(cp.getName(), cp.getName());
+        	}        		
+    		
+        }  catch (HelperException e) {
+	    	return m;
+		}
+        return m;
+    }  
+    
+    @SuppressWarnings("rawtypes")
+	@Override
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException 
+    {
+    	int taskId;
+    	int returnCode;
+    	int feedbackCounter;
+    	long startTime = System.nanoTime() ; 
+
+    	envVars = new EnvVars();
+    	envVars = build.getEnvironment(listener);    
+ //   	EnvTemplater envCnv = new EnvTemplater(envVars);
+    	
+    	String logString;
+    	Type collectionType = new TypeToken<Collection<String>>(){}.getType();
+    	Collection<String> tmp;
+    	List<String> logLines;
+    	
+    	int logIndex = 0;
+    	
+    	boolean failBuild = getWorkFlow().trim().toLowerCase().equals("no");
+    	
+    	Gson gson = new Gson();
+    	
+    	Calendar cal = new GregorianCalendar();
+        listener.getLogger().println("Web Service: "+webServiceAddress); 
+        
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        
+        CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+		cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+		try {
+			CastWebService cbws = cbwsl.getCastWebServicePort();
+			
+			Date dateForToday = dateFormat.parse(getCastTimeStamp()); 
+			String versionNameWithTag = getVersionName().replace("[TODAY]", dateFormatVersion.format(dateForToday));
+			String snapshotNameWithTag =  getSnapshotName().replace("[TODAY]", dateFormatVersion.format(dateForToday));
+			
+			listener.getLogger().println(String.format("[TODAY] = %s", dateFormat.format(dateForToday)));
+        	listener.getLogger().println(String.format("Version Name with Tags: %s", versionNameWithTag));
+        	listener.getLogger().println(String.format("Snapshot Name with Tags: %s", snapshotNameWithTag));
+			
+			VersionInfo vi = RemoteHelper.getVersionInfo(webServiceAddress);
+			if (!checkWebServiceCompatibility(vi.getVersion()))
+			{
+				listener.getLogger().println(String.format("Incompatible Web Service Version %s (Supported: %s)", vi.getVersion(), wsVersionCompatibility));
+				return false || failBuild;
+			}
+			
+			String appId = cbws.getApplicationUUID(appName);
+	        	
+	        if (ad)
+	        {
+	        	//Accept Deliver
+	        	listener.getLogger().println("Accept Delivery");
+	        	startTime = System.nanoTime(); 
+	        	
+	        	if (getDescriptor().getUseDMT())
+	        	{
+	        		listener.getLogger().println("...using DMT");
+	        		taskId = cbws.acceptDeliveryDMT(appId, appName, versionNameWithTag);
+	        	}
+	        	else
+	        	{
+	        		taskId = cbws.acceptDelivery(appName, versionNameWithTag, castMSConnectionProfile);
+	        	}	        	
+	        	
+	        	if (taskId < 0)
+	        	{
+	        		listener.getLogger().println(String.format("Error: %s",cbws.getErrorMessage(-taskId)));
+	            	return false || failBuild;
+	        	}
+	        	
+	        	feedbackCounter = 0;
+	        	logIndex = 0;
+	        	do
+	        	{
+	        		//Get Log
+	        		logString = cbws.getTaskOutput(taskId, logIndex);
+	    	        tmp = gson.fromJson(logString, collectionType);
+	    	        logLines = new ArrayList<String>(tmp);	        		
+	    	        logIndex += logLines.size();
+	    	        for(String s : logLines)
+	    	        	listener.getLogger().println(s);
+	        		
+	        		Thread.sleep(1000);
+	        		feedbackCounter++;
+	        		if (feedbackCounter % 300 == 0)
+	        			listener.getLogger().println(String.format(" %s...",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+
+	        	} while (cbws.isTaskRunning(taskId));
+	        	
+	        	//Get Log
+	        	logString = cbws.getTaskOutput(taskId, logIndex);
+		        tmp = gson.fromJson(logString, collectionType);
+		        logLines = new ArrayList<String>(tmp);	        		
+		        logIndex += logLines.size();
+		        for(String s : logLines)
+		        	listener.getLogger().println(s);
+
+		        listener.getLogger().println(String.format("Duration: %s",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+	        	
+	        	returnCode = cbws.getTaskExitValue(taskId);	
+	        	
+	        	listener.getLogger().println(String.format("Return Code: %d", returnCode));
+	        	
+	        	
+	        	if (returnCode != 0)
+	            	return false || failBuild;
+
+	        	listener.getLogger().println("");
+	        	
+	        	//Set As Current Version
+	        	listener.getLogger().println("Set As Current Version");
+	        	startTime = System.nanoTime(); 
+	        	taskId = cbws.setAsCurrentVersion(appName, versionNameWithTag, castMSConnectionProfile);
+	        	
+	        	if (taskId < 0)
+	        	{
+	        		listener.getLogger().println(String.format("Error: %s",cbws.getErrorMessage(-taskId)));
+	            	return false || failBuild;
+	        	}
+	        	
+	        	feedbackCounter = 0;
+	        	logIndex = 0;
+	        	do
+	        	{
+	        		//Get Log
+	        		logString = cbws.getTaskOutput(taskId, logIndex);
+	    	        tmp = gson.fromJson(logString, collectionType);
+	    	        logLines = new ArrayList<String>(tmp);	        		
+	    	        logIndex += logLines.size();
+	    	        for(String s : logLines)
+	    	        	listener.getLogger().println(s);
+	        		
+	        		Thread.sleep(1000);
+	        		feedbackCounter++;
+	        		if (feedbackCounter % 300 == 0)
+	        			listener.getLogger().println(String.format(" %s...",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+
+	        	} while (cbws.isTaskRunning(taskId));
+	        	
+	        	//Get Log
+	        	logString = cbws.getTaskOutput(taskId, logIndex);
+		        tmp = gson.fromJson(logString, collectionType);
+		        logLines = new ArrayList<String>(tmp);	        		
+		        logIndex += logLines.size();
+		        for(String s : logLines)
+		        	listener.getLogger().println(s);
+
+		        listener.getLogger().println(String.format("Duration: %s",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+	        	
+	        	returnCode = cbws.getTaskExitValue(taskId);	
+	        	
+	        	listener.getLogger().println(String.format("Return Code: %d", returnCode));
+	        	
+	        	if (returnCode != 0)
+	            	return false || failBuild;
+
+	        	listener.getLogger().println("");
+	        }
+	        
+	        if (ra)
+	        {
+	        	listener.getLogger().println("Run Analysis");
+	        	startTime = System.nanoTime(); 
+	        	taskId = cbws.runAnalysis(appName, castMSConnectionProfile);
+	        	
+	        	if (taskId < 0)
+	        	{
+	        		listener.getLogger().println(String.format("Error: %s",cbws.getErrorMessage(-taskId)));
+	            	return false || failBuild;
+	        	}
+	        	
+	        	feedbackCounter = 0;
+	        	logIndex = 0;
+	        	do
+	        	{
+	        		//Get Log
+	        		logString = cbws.getTaskOutput(taskId, logIndex);
+	    	        tmp = gson.fromJson(logString, collectionType);
+	    	        logLines = new ArrayList<String>(tmp);	        		
+	    	        logIndex += logLines.size();
+	    	        for(String s : logLines)
+	    	        	listener.getLogger().println(s);
+	        		
+	        		Thread.sleep(1000);
+	        		feedbackCounter++;
+	        		if (feedbackCounter % 300 == 0)
+	        			listener.getLogger().println(String.format(" %s...",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+
+	        	} while (cbws.isTaskRunning(taskId));
+	        	
+	        	//Get Log
+	        	logString = cbws.getTaskOutput(taskId, logIndex);
+		        tmp = gson.fromJson(logString, collectionType);
+		        logLines = new ArrayList<String>(tmp);	        		
+		        logIndex += logLines.size();
+		        for(String s : logLines)
+		        	listener.getLogger().println(s);
+
+		        listener.getLogger().println(String.format("Duration: %s",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+	        	
+	        	returnCode = cbws.getTaskExitValue(taskId);	
+	        	
+	        	listener.getLogger().println(String.format("Return Code: %d", returnCode));
+	            
+	        	if (returnCode != 0)
+	            	return false || failBuild;
+
+	        	listener.getLogger().println("");
+	        }
+	        
+	        if (rs)
+	        {
+	        	listener.getLogger().println("Run Snapshot");
+	        	cal.setTime(getCaptureDateAsDate(dateForToday));
+	        	startTime = System.nanoTime(); 
+	        	taskId = cbws.runSnapshot(appName, castMSConnectionProfile, snapshotNameWithTag, versionNameWithTag, cal);
+	        	
+	        	if (taskId < 0)
+	        	{
+	        		listener.getLogger().println(String.format("Error: %s",cbws.getErrorMessage(-taskId)));
+	            	return false || failBuild;
+	        	}
+	        	
+	        	feedbackCounter = 0;
+	        	logIndex = 0;
+	        	do
+	        	{
+	        		//Get Log
+	        		logString = cbws.getTaskOutput(taskId, logIndex);
+	    	        tmp = gson.fromJson(logString, collectionType);
+	    	        logLines = new ArrayList<String>(tmp);	        		
+	    	        logIndex += logLines.size();
+	    	        for(String s : logLines)
+	    	        	listener.getLogger().println(s);
+	        		
+	        		Thread.sleep(1000);
+	        		feedbackCounter++;
+	        		if (feedbackCounter % 300 == 0)
+	        			listener.getLogger().println(String.format(" %s...",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+
+	        	} while (cbws.isTaskRunning(taskId));
+	        	
+	        	//Get Log
+	        	logString = cbws.getTaskOutput(taskId, logIndex);
+		        tmp = gson.fromJson(logString, collectionType);
+		        logLines = new ArrayList<String>(tmp);	        		
+		        logIndex += logLines.size();
+		        for(String s : logLines)
+		        	listener.getLogger().println(s);
+
+		        listener.getLogger().println(String.format("Duration: %s",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+	        	
+	        	returnCode = cbws.getTaskExitValue(taskId);	
+	        	
+	        	listener.getLogger().println(String.format("Return Code: %d", returnCode));
+	        	
+	        	if (returnCode != 0)
+	            	return false || failBuild;
+
+	        	listener.getLogger().println("");
+	        }    
+	        
+	        if (archive)
+	        {
+	        	listener.getLogger().println("Archive Delivery");
+	        	startTime = System.nanoTime(); 
+	        	taskId = cbws.archiveDelivery(appId, versionNameWithTag);
+	        	
+	        	if (taskId < 0)
+	        	{
+	        		listener.getLogger().println(String.format("Error: %s",cbws.getErrorMessage(-taskId)));
+	            	return false || failBuild;
+	        	}
+	        	
+	        	feedbackCounter = 0;
+	        	logIndex = 0;
+	        	do
+	        	{
+	        		//Get Log
+	        		logString = cbws.getTaskOutput(taskId, logIndex);
+	    	        tmp = gson.fromJson(logString, collectionType);
+	    	        logLines = new ArrayList<String>(tmp);	        		
+	    	        logIndex += logLines.size();
+	    	        for(String s : logLines)
+	    	        	listener.getLogger().println(s);
+	        		
+	        		Thread.sleep(1000);
+	        		feedbackCounter++;
+	        		if (feedbackCounter % 300 == 0)
+	        			listener.getLogger().println(String.format(" %s...",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+
+	        	} while (cbws.isTaskRunning(taskId));
+	        	
+	        	//Get Log
+	        	logString = cbws.getTaskOutput(taskId, logIndex);
+		        tmp = gson.fromJson(logString, collectionType);
+		        logLines = new ArrayList<String>(tmp);	        		
+		        logIndex += logLines.size();
+		        for(String s : logLines)
+		        	listener.getLogger().println(s);
+
+		        listener.getLogger().println(String.format("Duration: %s",CastUtil.formatNanoTime(System.nanoTime() - startTime)));
+	        	
+	        	returnCode = cbws.getTaskExitValue(taskId);	
+	        	
+	        	listener.getLogger().println(String.format("Return Code: %d", returnCode));
+	            
+	        	if (returnCode != 0)
+	            	return false || failBuild;
+
+	        	listener.getLogger().println("");
+	        }
+		} 
+		catch (ServiceException | RemoteException | ParseException | InterruptedException | HelperException e) {
+			listener.getLogger().println(
+					String.format("Interrupted after: %s\n%s: %s", 
+							CastUtil.formatNanoTime(System.nanoTime() - startTime),
+							e.getClass().getName(),  
+							e.getMessage()));
+			return false || failBuild;
+		}   
+        return true;
+    }
+
+    // Overridden for better type safety.
+    // If your plugin doesn't really define any property on Descriptor,
+    // you don't have to do this.
+    @Override
+    public DescriptorImpl getDescriptor() {
+        return (DescriptorImpl)super.getDescriptor();
+    }
+
+    /**
+     * Descriptor for {@link CastCMSBuilder}. Used as a singleton.
+     * The class is marked as public so that it can be accessed from views.
+     *
+     * <p>
+     * See <tt>src/main/resources/hudson/plugins/hello_world/CastDMTBuilder/*.jelly</tt>
+     * for the actual HTML fragment for the configuration screen.
+     */
+    @Extension // This indicates to Jenkins that this is an implementation of an extension point.
+    public static final class DescriptorImpl extends BuildStepDescriptor<Builder> 
+    {
+
+        private boolean useDMT;
+
+        public DescriptorImpl() {
+            load();
+        }
+
+        public FormValidation doCheckCaptureDate(@QueryParameter String value)
+                throws IOException, ServletException {
+            if (value.equals("[TODAY]"))
+            	return FormValidation.ok();
+        	try {
+				new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.ENGLISH).parse(value);
+				return FormValidation.ok();
+			} catch (ParseException e) {
+				return FormValidation.error("Expected format is \"MM/dd/yyyy HH:mm:ss\"");
+			}
+        }
+
+        @SuppressWarnings("rawtypes")
+		public boolean isApplicable(Class<? extends AbstractProject> aClass) {
+            // Indicates that this builder can be used with all kinds of project types 
+            return true;
+        }
+
+        /**
+         * This human readable name is used in the configuration screen.
+         */
+        public String getDisplayName() {
+            return "Cast AIP - Analysis (WebService)";
+        }        
+        
+        public FormValidation doTestConnection(@QueryParameter("webServiceAddress") final String webServiceAddress) throws IOException, ServletException {
+        	try {   		       		
+        		return FormValidation.ok(String.format("Success (%s)", RemoteHelper.getVersionInfo(webServiceAddress).toString()));
+        		
+            } catch (HelperException e) {
+            	return FormValidation.error(String.format("%s: %s", e.getClass().getName(), e.getMessage()));
+    		} 
+        }
+        
+        public ListBoxModel doFillCastMSConnectionProfileItems(
+        		@QueryParameter("webServiceAddress") final String webServiceAddress) {
+        	ListBoxModel m = new ListBoxModel();
+        	
+            try {
+            	Collection<ConnectionProfile> cpList = RemoteHelper.listConnectionProfiles(webServiceAddress);
+        		
+            	for(ConnectionProfile cp : cpList)
+            	{
+            		m.add(cp.getName(), cp.getName());
+            	}        		
+        		
+            }  catch (HelperException e) {
+    	    	return m;
+			}
+            return m;
+        }  
+        
+        public ListBoxModel doFillAppNameItems(
+        		@QueryParameter("webServiceAddress") final String webServiceAddress) {
+        	ListBoxModel m = new ListBoxModel();
+        	
+            try {
+            	Collection<String> apps = RemoteHelper.listApplications(webServiceAddress);
+        		
+            	for(String app : apps)
+            	{
+            		m.add(app);
+            	}        		
+        		
+            }  catch (HelperException e) {
+    	    	return m;
+			}
+            return m;
+        } 
+
+        @Override
+        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+        	useDMT = formData.getBoolean("useDMT");
+            save();
+            return super.configure(req,formData);
+        }
+
+        public boolean getUseDMT() {
+            return useDMT;
+        }
+    }
+}
+

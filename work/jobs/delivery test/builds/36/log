@@ -1,0 +1,82 @@
+Started by user [8mha:AAAAlh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAzOEgYu/dLi1CL9vNKcHACFIKlWvwAAAA==[0manonymous
+Building in workspace C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace
+Run condition [Numerical comparison] enabling prebuild for step [Cast AIP - Delivery (WebService)]
+Run condition [Numerical comparison] enabling prebuild for step [CAST AIP Analysis 1-Accept Delivery]
+Run condition [Numerical comparison] enabling prebuild for step [CAST AIP Analysis 2-Analyze Application]
+Run condition [Numerical comparison] enabling prebuild for step [CAST AIP Analysis 3-Generate Snapshot]
+Numerical comparison: [2] <= Less than or equal to [1]
+Run condition [Numerical comparison] preventing perform for step [Cast AIP - Delivery (WebService)]
+Web Service: http://nkaw8lap:9898/CastBatchWebService
+[TODAY] = 2016/05/20 08:59:25
+Version Name with Tags: Version 2016-05-20_08-59-25
+Snapshot Name with Tags: 
+Numerical comparison: [2] <= Less than or equal to [2]
+Run condition [Numerical comparison] enabling perform for step [CAST AIP Analysis 1-Accept Delivery]
+
+Accept Delivery
+Web Service: http://nkaw8lap:9898/CastBatchWebService
+[TODAY] = 2016/05/20 08:59:25
+Version Name with Tags: Version 2016-05-20_08-59-25
+Using arguments:
+	AcceptDelivery
+	-connectionProfile: version737
+	-appli: Webgoat
+	-version: Version 2016-05-20_08-59-25
+Log file : C:\Users\nka\AppData\Local\Temp\CAST\CAST\7.3\CAST-MS218.log.txt
+Running action: Accepts a new delivery
+Return value: 0
+******************************
+Duration: 18s
+Return Code: 0
+
+
+Set As Current Version
+Using arguments:
+	SetAsCurrentVersion
+	-connectionProfile: version737
+	-appli: Webgoat
+	-version: Version 2016-05-20_08-59-25
+Log file : C:\Users\nka\AppData\Local\Temp\CAST\CAST\7.3\CAST-MS219.log.txt
+Running action: Set an existing generated version as current version of an application
+Return value: 0
+******************************
+Duration: 20s
+Return Code: 0
+
+
+Numerical comparison: [2] <= Less than or equal to [3]
+Run condition [Numerical comparison] enabling perform for step [CAST AIP Analysis 2-Analyze Application]
+
+Run Analysis
+Using arguments:
+	RunAnalysis
+	-connectionProfile: version737
+	-appli: Webgoat
+Log file : C:\Users\nka\AppData\Local\Temp\CAST\CAST\7.3\CAST-MS220.log.txt
+Running action: Execute Analysis for one or all applications
+Return value: 0
+******************************
+Duration: 1m12s
+Return Code: 0
+
+Numerical comparison: [2] <= Less than or equal to [4]
+Run condition [Numerical comparison] enabling perform for step [CAST AIP Analysis 3-Generate Snapshot]
+
+Run Snapshot
+Using arguments:
+	GenerateSnapshot
+	-connectionProfile: version737
+	-appli: Webgoat
+	-snapshot: Computed on 2016-05-20_08-59-25
+	-version: Version 2016-05-20_08-59-25
+	-captureDate: 20160520085925
+	-ignoreEmptyModule: true
+	-skipAnalysisJob: true
+Log file : C:\Users\nka\AppData\Local\Temp\CAST\CAST\7.3\CAST-MS221.log.txt
+Running action: Generate a Snapshot for a given Application, or for each Applications from selected Dashboard Service
+Return value: 0
+******************************
+Duration: 1m38s
+Return Code: 0
+
+Finished: SUCCESS

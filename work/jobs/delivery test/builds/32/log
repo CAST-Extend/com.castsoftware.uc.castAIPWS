@@ -1,0 +1,35 @@
+Started by user [8mha:AAAAlh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAzOEgYu/dLi1CL9vNKcHACFIKlWvwAAAA==[0manonymous
+Building in workspace C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace
+Run condition [Never] preventing prebuild for step [Cast AIP - Delivery (WebService)]
+Run condition [Always] enabling prebuild for step [CAST AIP Analysis 1-Accept Delivery]
+Run condition [Never] preventing prebuild for step [CAST AIP Analysis 2-Analyze Application]
+Run condition [Always] enabling prebuild for step [CAST AIP Analysis 3-Generate Snapshot]
+Run condition [Never] preventing perform for step [Cast AIP - Delivery (WebService)]
+Web Service: http://nkaw8lap:9898/CastBatchWebService
+[TODAY] = 2016/05/20 10:19:17
+Version Name with Tags: Version 2016-05-20_10-19-17
+Snapshot Name with Tags: 
+Run condition [Always] enabling perform for step [CAST AIP Analysis 1-Accept Delivery]
+
+Accept Delivery
+Web Service: http://nkaw8lap:9898/CastBatchWebService
+[TODAY] = 2016/05/20 10:19:17
+Version Name with Tags: Version 2016-05-20_10-19-17
+Using arguments:
+	AcceptDelivery
+	-connectionProfile: version737
+	-appli: Webgoat
+	-version: Version 2016-05-20_10-19-17
+Log file : C:\Users\nka\AppData\Local\Temp\CAST\CAST\7.3\CAST-MS210.log.txt
+Running action: Accepts a new delivery
+Error: Child task on exception
+  The program Delivery Manager Tool has not ended correctly (error code "1,000").
+    Please see the CAST Management Studio log and/or the program log for further details
+    Execution log C:\Users\nka\SkyDrive\CAST\Automation\CASTLogs\8f96d98480194a8391b3c79cde217b53\DmtValidate-20160520103116.castlog2
+Return value: 1000
+******************************
+Duration: 13s
+Return Code: 1000
+
+Build step 'Conditional step (single)' marked build as failure
+Finished: FAILURE

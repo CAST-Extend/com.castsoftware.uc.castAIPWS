@@ -1,0 +1,10 @@
+Started by user [8mha:AAAAlh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAzOEgYu/dLi1CL9vNKcHACFIKlWvwAAAA==[0manonymous
+Building in workspace C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace
+Run condition [Never] preventing prebuild for step [Cast AIP - Delivery (WebService)]
+Run condition [Never] preventing prebuild for step [CAST AIP Analysis 1-Accept Delivery]
+Run condition [Never] preventing prebuild for step [CAST AIP Analysis 2-Analyze Application]
+Run condition [Always] enabling prebuild for step [CAST AIP Analysis 3-Generate Snapshot]
+Run condition [Never] preventing perform for step [Cast AIP - Delivery (WebService)]
+ERROR: Unable to publish CAST Enviroment Variables
+[8mha:AAAAWB+LCAAAAAAAAP9b85aBtbiIQSmjNKU4P08vOT+vOD8nVc8DzHWtSE4tKMnMz/PLL0ldFVf2c+b/lb5MDAwVRQxSaBqcITRIIQMEMIIUFgAAckCEiWAAAAA=[0mBuild step 'CAST AIP Analysis Configuration' marked build as failure
+Finished: FAILURE

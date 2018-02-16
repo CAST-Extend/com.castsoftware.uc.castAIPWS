@@ -1,0 +1,17 @@
+Started by user [8mha:AAAAlh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAzOEgYu/dLi1CL9vNKcHACFIKlWvwAAAA==[0manonymous
+Building in workspace C:\Users\nka\SkyDrive\CAST\Projects\CastAIPWS\work\jobs\delivery test\workspace
+Web Service: http://nkaw8lap:9898/CastBatchWebService
+[TODAY] = 2016/05/18 17:35:32
+Version Name with Tags: Version 2016-05-18_17-35-32
+
+Delivery Manager Tool
+Using arguments:
+	AddVersion
+	-application: Webgoat
+	-oneApplicationMode: 8f96d984-8019-4a83-91b3-c79cde217b53
+	-version: 5.0
+	-name: Version 2016-05-18_17-35-32
+	-releaseDate: 20160518173532
+	-storagePath: C:/CASTMS/Delivery737
+Build step 'Cast AIP - Delivery (WebService)' marked build as failure
+Finished: FAILURE

@@ -1,0 +1,578 @@
+package com.castsoftware.jira;
+
+import java.util.HashMap;
+import java.util.StringTokenizer;
+
+import net.rcarz.jiraclient.BasicCredentials;
+import net.rcarz.jiraclient.Field;
+import net.rcarz.jiraclient.Issue;
+import net.rcarz.jiraclient.JiraClient;
+import net.rcarz.jiraclient.JiraException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.castsoftware.jira.pojo.ActionPlanViolation;
+import com.castsoftware.jira.util.Configuration;
+import com.castsoftware.jira.util.Constants;
+
+
+/**
+ * The Class CreateJiraIssues creates the jira issues
+ * 
+ * @author FME
+ * @version 1.1
+ */
+public class CreateJiraIssues {
+
+	/** The log. */
+	public static Log log = LogFactory.getLog(CreateJiraIssues.class);
+
+	/** The jira user name. */
+	private String jiraUserName;
+
+	/** The jira user password. */
+	private String jiraUserPassword;
+
+	/** The jira rest api url. */
+	private String jiraRestApiUrl;
+
+	/** The map. */
+	private HashMap<Integer, ActionPlanViolation> map;
+
+	/** The jira project name. */
+	private String jiraProjectName;
+
+	/** The issue type. */
+	private String issueType;
+
+	/** The assignee name. */
+	private String assigneeName;
+
+	/** The jira. */
+	private JiraClient jira;
+
+	/** The total num of issues. */
+	private int totalNumOfIssues;
+
+	/** The total num of issues added. */
+	private int totalNumOfIssuesAdded;
+
+	/** The total num of issues not added by error. */
+	private int totalNumOfIssuesNotAddedByError;
+
+	/** The total num of issues not added by exist. */
+	private int totalNumOfIssuesNotAddedByExist;
+
+	/**
+	 * Instantiates a new creates the jira issues.
+	 * 
+	 * @param jiraUserName
+	 *            the jira user name
+	 * @param jiraUserPassword
+	 *            the jira user password
+	 * @param jiraRestApiUrl
+	 *            the jira rest api url
+	 * @param map
+	 *            the map
+	 * @param jiraProjectName
+	 *            the jira project name
+	 * @param issueType
+	 *            the issue type
+	 * @param assigneeName
+	 *            the assignee name
+	 * @throws Exception
+	 *             the exception
+	 */
+	public CreateJiraIssues(String jiraUserName, String jiraUserPassword,
+			String jiraRestApiUrl, HashMap<Integer, ActionPlanViolation> map,
+			String jiraProjectName, String issueType, String assigneeName)
+			throws Exception {
+		setJiraUserName(jiraUserName);
+		setJiraUserPassword(jiraUserPassword);
+		setJiraRestApiUrl(jiraRestApiUrl);
+		setMap(map);
+		setJiraProjectName(jiraProjectName);
+		if(issueType==null || issueType.trim().length()==0){
+			setIssueType(Constants.JIRA_DEFAULT_ISSUE_TYPE);
+		}else{
+		     setIssueType(issueType);
+		}
+		if(assigneeName==null || assigneeName.trim().length()==0 ){
+			setAssigneeName(getJiraUserName());
+		}else{
+			setAssigneeName(assigneeName);
+		}
+		
+		log.info("Sending BasicCredentials to Jira!");
+		BasicCredentials creds = new BasicCredentials(getJiraUserName(),
+				getJiraUserPassword());
+		log.info("Jira BasicCredentials done!");
+
+		log.info("Starting JiraClient connection!");
+		jira = new JiraClient(getJiraRestApiUrl(), creds);
+		log.info("JiraClient connection done!");
+		setCreateIssuesInJira();
+
+	}
+
+	/**
+	 * Sets the create issues in jira.
+	 * 
+	 * @return true, if successful
+	 * @throws Exception
+	 *             the exception
+	 */
+	public boolean setCreateIssuesInJira() throws Exception {
+		ActionPlanViolation temp;
+		Configuration loadConfig = new Configuration();
+		loadConfig.loadPriorityMapping();
+		loadConfig.loadCastToJiraFieldsMapping();
+		setTotalNumOfIssues(getMap().size());
+		
+		for (int key : getMap().keySet()) {
+			log.info("------------------------------------------------");
+			log.info("Iterating or looping map Action Plan violations foreach loop");
+			log.info("key: " + Integer.toString(key) + " value: "
+					+ getMap().get(key));
+			temp = getMap().get(key);
+			log.info("Project Name: " + getJiraProjectName());
+			log.info("Issue Type: " + getIssueType());
+			log.info("Priority: " + temp.getPriority());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_ADDED_TO_ACTION_PLAN_DATE)
+					+ " : " + temp.getActionDate());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_REASON_DESCRIPTION)
+					+ " : " + temp.getReason());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_OUTPUT_DESCRIPTION)
+					+ " : " + temp.getOutput());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_REFERENCE_DESCRIPTION)
+					+ " : " + temp.getReference());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_METRIC_SHORT_DESCRIPTION)
+					+ " : " + temp.getMetricShortDescription());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_METRIC_LONG_DESCRIPTION)
+					+ " : " + temp.getMetricLongDescription());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_OBJECT_FULL_NAME)
+					+ " : " + temp.getObjectFullName());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_REMEDIATION_DESCRIPTION)
+					+ " : " + temp.getRemediation());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_REMEDIATION_EXAMPLE_DESCRIPTION)
+					+ " : " + temp.getRemediationExample());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_TOTAL_DESCRIPTION)
+					+ " : " + temp.getTotales());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_VIOLATION_EXAMPLE_DESCRIPTION)
+					+ " : " + temp.getViolationExample());
+			log.info(loadConfig
+					.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_ACTION_DEFINED_DESCRIPTION)
+					+ " : " + temp.getActionDef());
+
+			try {
+				/*
+				 * Check if issue is already in Jira
+				 */
+				Issue.SearchResult sr = jira.searchIssues(Field.DESCRIPTION
+						+ "~ " + getJiraProjectName() + "-"
+						+ Integer.toString(key));
+
+				if (sr.total == 0) {
+					/* Create a new issue. */
+					log.info("The new issue CRC code is: "
+							+ Integer.toString(key));
+
+					Issue newIssue = jira
+							.createIssue(getJiraProjectName(), getIssueType())
+							.field(Field.ISSUE_TYPE, getIssueType())
+							.field(Field.PRIORITY,
+									loadConfig
+											.getPriorityMappingConversion(Integer
+													.toString(temp
+															.getPriority())))
+							.field(Field.SUMMARY,
+									getJiraFieldComposition(
+											temp,
+											loadConfig,
+											Constants.FIELD_MAPPING_LABEL_SUMMARY_JIRA_DESCRIPTION))
+							.field(Field.DESCRIPTION,
+									getJiraFieldComposition(
+											temp,
+											loadConfig,
+											Constants.FIELD_MAPPING_LABEL_DESCRIPTION_JIRA_DESCRIPTION)
+											+ getJiraProjectName()
+											+ "-"
+											+ Integer.toString(key))
+							.field(Field.REPORTER, getJiraUserName())
+							.field(Field.ASSIGNEE, getAssigneeName()).execute();
+					log.info("The newIssue created with Jira ID: " + newIssue);
+					setTotalNumOfIssuesAdded(++totalNumOfIssuesAdded);
+					
+				} else {
+					setTotalNumOfIssuesNotAddedByExist(++totalNumOfIssuesNotAddedByExist);
+					for (Issue i : sr.issues) {
+						log.info("The issue is already in Jira. CastID: "
+								+ getJiraProjectName() + "-"
+								+ Integer.toString(key) + ". Issue in Jira: "
+								+ i);
+						log.info(" Issue Status: " + i.getStatus());
+						log.info(" Issue Resolution: " + i.getResolution());
+						;
+					}
+				}
+
+			} catch (JiraException ex) {
+				setTotalNumOfIssuesNotAddedByError(++totalNumOfIssuesNotAddedByError);
+				if (ex.getCause() != null) {
+					if (ex.getCause().getMessage().toString()
+							.contains("Forbidden (403)")) {
+						log.error("JiraException Error: Forbidden (403) review the logging jira user & password - "
+								+ ex.getCause().getMessage());
+						throw new Exception(ex.toString());
+					} else {
+						log.error("JiraException Error: "
+								+ ex.getCause().getMessage());
+					}
+				}
+				log.error("JiraException Error: "
+						+ ex.getMessage()
+						+ ". Please review that values provided are available in JIRA (issuetype, priority, assignee, etc).");
+			}
+
+		}
+
+		return false;
+	}
+
+	/**
+	 * Gets the map.
+	 * 
+	 * @return the map
+	 */
+	public HashMap<Integer, ActionPlanViolation> getMap() {
+		return map;
+	}
+
+	/**
+	 * Sets the map.
+	 * 
+	 * @param map
+	 *            the map to set
+	 */
+	public void setMap(HashMap<Integer, ActionPlanViolation> map) {
+		this.map = map;
+	}
+
+	/**
+	 * Sets the jira project name.
+	 * 
+	 * @param jiraProjectName
+	 *            the new jira project name
+	 */
+	public void setJiraProjectName(String jiraProjectName) {
+		this.jiraProjectName = jiraProjectName;
+	}
+
+	/**
+	 * Gets the jira user name.
+	 * 
+	 * @return the jiraUserName
+	 */
+	public String getJiraUserName() {
+		return jiraUserName;
+	}
+
+	/**
+	 * Sets the jira user name.
+	 * 
+	 * @param jiraUserName
+	 *            the jiraUserName to set
+	 */
+	public void setJiraUserName(String jiraUserName) {
+		this.jiraUserName = jiraUserName;
+	}
+
+	/**
+	 * Gets the jira user password.
+	 * 
+	 * @return the jiraUserPassword
+	 */
+	public String getJiraUserPassword() {
+		return jiraUserPassword;
+	}
+
+	/**
+	 * Sets the jira user password.
+	 * 
+	 * @param jiraUserPassword
+	 *            the jiraUserPassword to set
+	 */
+	public void setJiraUserPassword(String jiraUserPassword) {
+		this.jiraUserPassword = jiraUserPassword;
+	}
+
+	/**
+	 * Gets the jira rest api url.
+	 * 
+	 * @return the jiraRestApiUrl
+	 */
+	public String getJiraRestApiUrl() {
+		return jiraRestApiUrl;
+	}
+
+	/**
+	 * Sets the jira rest api url.
+	 * 
+	 * @param jiraRestApiUrl
+	 *            the jiraRestApiUrl to set
+	 */
+	public void setJiraRestApiUrl(String jiraRestApiUrl) {
+		this.jiraRestApiUrl = jiraRestApiUrl;
+	}
+
+	/**
+	 * Gets the jira project name.
+	 * 
+	 * @return the jiraProjectName
+	 */
+	public String getJiraProjectName() {
+		return jiraProjectName;
+	}
+
+	/**
+	 * Gets the issue type.
+	 * 
+	 * @return the issueType
+	 */
+	public String getIssueType() {
+		return issueType;
+	}
+
+	/**
+	 * Sets the issue type.
+	 * 
+	 * @param issueType
+	 *            the issueType to set
+	 */
+	public void setIssueType(String issueType) {
+		this.issueType = issueType;
+	}
+
+	/**
+	 * Gets the assignee name.
+	 * 
+	 * @return the assigneeName
+	 */
+	public String getAssigneeName() {
+		return assigneeName;
+	}
+
+	/**
+	 * Sets the assignee name.
+	 * 
+	 * @param assigneeName
+	 *            the assigneeName to set
+	 */
+	public void setAssigneeName(String assigneeName) {
+		this.assigneeName = assigneeName;
+	}
+
+	/**
+	 * Gets the jira field composition.
+	 * 
+	 * @param temp
+	 *            the temp
+	 * @param fieldmap
+	 *            the fieldmap
+	 * @param fieldType
+	 *            the field type
+	 * @return the jira field composition
+	 */
+	public String getJiraFieldComposition(ActionPlanViolation temp,
+			Configuration fieldmap, String fieldType) {
+		String field = new String();
+		String fields;
+		if (fieldType
+				.equals(Constants.FIELD_MAPPING_LABEL_SUMMARY_JIRA_DESCRIPTION)) {
+			fields = fieldmap
+					.getJiraFields(Constants.FIELD_MAPPING_LABEL_SUMMARY_JIRA_DESCRIPTION);
+		} else {
+			fields = fieldmap
+					.getJiraFields(Constants.FIELD_MAPPING_LABEL_DESCRIPTION_JIRA_DESCRIPTION);
+		}
+		StringBuilder result = new StringBuilder();
+		StringTokenizer tokens = new StringTokenizer(fields, ";");
+
+		while (tokens.hasMoreTokens()) {
+			field = tokens.nextToken();
+			log.debug(" Field to include in Jira " + fieldType + " : " + field);
+			if (fields.indexOf(field) != -1) {
+				if (fieldType
+						.equals(Constants.FIELD_MAPPING_LABEL_DESCRIPTION_JIRA_DESCRIPTION)) {
+					result.append(fieldmap.getCastToJiraFieldsMapping(field));
+					result.append(" ");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_ACTION_DEFINED_DESCRIPTION)) {
+					result.append(temp.getActionDef());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_ADDED_TO_ACTION_PLAN_DATE)) {
+					result.append(temp.getActionDate());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_METRIC_LONG_DESCRIPTION)) {
+					result.append(temp.getMetricLongDescription());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_METRIC_SHORT_DESCRIPTION)) {
+					result.append(temp.getMetricShortDescription());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_OBJECT_FULL_NAME)) {
+					result.append(temp.getObjectFullName());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_OUTPUT_DESCRIPTION)) {
+					result.append(temp.getOutput());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_REASON_DESCRIPTION)) {
+					result.append(temp.getReason());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_REFERENCE_DESCRIPTION)) {
+					result.append(temp.getReference());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_REMEDIATION_DESCRIPTION)) {
+					result.append(temp.getRemediation());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_REMEDIATION_EXAMPLE_DESCRIPTION)) {
+					result.append(temp.getRemediationExample());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_TOTAL_DESCRIPTION)) {
+					result.append(temp.getTotales());
+					result.append("\n");
+				}
+				if (field
+						.equals(Constants.FIELD_MAPPING_LABEL_VIOLATION_EXAMPLE_DESCRIPTION)) {
+					result.append(temp.getViolationExample());
+					result.append("\n");
+				}
+			}
+
+		}
+		if (result.length() == 0) {
+			if (fieldType
+					.equals(Constants.FIELD_MAPPING_LABEL_SUMMARY_JIRA_DESCRIPTION)) {
+				log.info("Default field content to include in Jira for Summary field");
+				result.append(temp.getMetricShortDescription());
+			} else {
+				log.info("Default field content to include in Jira for Description field");
+				result.append(temp.getObjectFullName());
+				result.append(temp.getActionDate());
+				result.append(temp.getActionDef());
+				result.append(temp.getMetricLongDescription());
+				result.append(temp.getReason());
+				result.append(temp.getReference());
+				result.append(temp.getRemediation());
+				result.append(temp.getViolationExample());
+				result.append(temp.getRemediationExample());
+				result.append(temp.getTotales());
+				result.append(temp.getOutput());
+			}
+
+		} else {
+			if (fieldType
+					.equals(Constants.FIELD_MAPPING_LABEL_DESCRIPTION_JIRA_DESCRIPTION)) {
+				result.append(fieldmap
+						.getCastToJiraFieldsMapping(Constants.FIELD_MAPPING_LABEL_CASTID_DESCRIPTION));
+				result.append(" ");
+			}
+		}
+		return result.toString();
+	}
+
+	/**
+	 * @return the totalNumOfIssues
+	 */
+	public int getTotalNumOfIssues() {
+		return totalNumOfIssues;
+	}
+
+	/**
+	 * @param totalNumOfIssues
+	 *            the totalNumOfIssues to set
+	 */
+	public void setTotalNumOfIssues(int totalNumOfIssues) {
+		this.totalNumOfIssues = totalNumOfIssues;
+	}
+
+	/**
+	 * @return the totalNumOfIssuesAdded
+	 */
+	public int getTotalNumOfIssuesAdded() {
+		return totalNumOfIssuesAdded;
+	}
+
+	/**
+	 * @param totalNumOfIssuesAdded
+	 *            the totalNumOfIssuesAdd to set
+	 */
+	public void setTotalNumOfIssuesAdded(int totalNumOfIssuesAddeded) {
+		this.totalNumOfIssuesAdded = totalNumOfIssuesAddeded;
+	}
+
+	/**
+	 * @return the totalNumOfIssuesNotAddedByError
+	 */
+	public int getTotalNumOfIssuesNotAddedByError() {
+		return totalNumOfIssuesNotAddedByError;
+	}
+
+	/**
+	 * @param totalNumOfIssuesNotAddedByError
+	 *            the totalNumOfIssuesNotAddedByError to set
+	 */
+	public void setTotalNumOfIssuesNotAddedByError(
+			int totalNumOfIssuesNotAddedByError) {
+		this.totalNumOfIssuesNotAddedByError = totalNumOfIssuesNotAddedByError;
+	}
+
+	/**
+	 * @return the totalNumOfIssuesNotAddedByExist
+	 */
+	public int getTotalNumOfIssuesNotAddedByExist() {
+		return totalNumOfIssuesNotAddedByExist;
+	}
+
+	/**
+	 * @param totalNumOfIssuesNotAddedByExist
+	 *            the totalNumOfIssuesNotAddedByExist to set
+	 */
+	public void setTotalNumOfIssuesNotAddedByExist(
+			int totalNumOfIssuesNotAddedByExist) {
+		this.totalNumOfIssuesNotAddedByExist = totalNumOfIssuesNotAddedByExist;
+	}
+
+}

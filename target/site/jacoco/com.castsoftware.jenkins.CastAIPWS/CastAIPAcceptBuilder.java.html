@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>CastAIPAcceptBuilder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CAST Jenkins Plugin</a> &gt; <a href="index.source.html" class="el_package">com.castsoftware.jenkins.CastAIPWS</a> &gt; <span class="el_source">CastAIPAcceptBuilder.java</span></div><h1>CastAIPAcceptBuilder.java</h1><pre class="source lang-java linenums">package com.castsoftware.jenkins.CastAIPWS;
+
+import hudson.EnvVars;
+import hudson.Launcher;
+import hudson.model.BuildListener;
+import hudson.model.AbstractBuild;
+import hudson.tasks.Builder;
+
+import java.io.IOException;
+import java.rmi.RemoteException;
+import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
+
+import javax.xml.rpc.ServiceException;
+
+import org.apache.axis.AxisFault;
+import org.kohsuke.stapler.DataBoundConstructor;
+
+import com.castsoftware.batch.CastWebService;
+import com.castsoftware.batch.CastWebServiceServiceLocator;
+import com.castsoftware.exception.HelperException;
+import com.castsoftware.jenkins.CastAIPWS.util.Constants;
+import com.castsoftware.jenkins.CastAIPWS.util.Utils;
+import com.castsoftware.util.CastUtil;
+import com.castsoftware.util.VersionInfo;
+import com.castsoftware.webservice.RemoteHelper;
+
+public class CastAIPAcceptBuilder extends Builder
+{
+
+	// Fields in config.jelly must match the parameter names in the
+	// &quot;DataBoundConstructor&quot;
+	@DataBoundConstructor
+	public CastAIPAcceptBuilder()
+<span class="nc" id="L36">	{</span>
+<span class="nc" id="L37">	}</span>
+
+	private Boolean checkWebServiceCompatibility(String version)
+	{
+<span class="nc" id="L41">		return Constants.wsVersionCompatibility.equals(version);</span>
+	}
+
+	@SuppressWarnings(&quot;rawtypes&quot;)
+	@Override
+	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException,
+			InterruptedException
+	{
+		int taskId;
+<span class="nc" id="L50">		long startTime = System.nanoTime();</span>
+
+<span class="nc" id="L52">		EnvVars envVars = build.getEnvironment(listener);</span>
+		int startAt;
+		try {
+<span class="nc" id="L55">			startAt = Integer.parseInt(envVars.get(Constants.START_AT));</span>
+<span class="nc" id="L56">		} catch (NumberFormatException e) {</span>
+<span class="nc" id="L57">			startAt=0;</span>
+<span class="nc" id="L58">		}</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">		if (startAt &gt; Constants.RunAcceptDelivery) {</span>
+<span class="nc" id="L60">			listener.getLogger().println(&quot; &quot;);</span>
+<span class="nc" id="L61">			listener.getLogger().println(</span>
+					String.format(&quot;${START_AT} = %d, skipping delivery acceptance step.&quot;, startAt));
+		} else {
+<span class="nc" id="L64">	 	 	listener.getLogger().println(&quot;&quot;);</span>
+<span class="nc" id="L65">			listener.getLogger().println(&quot;Accept Delivery&quot;);</span>
+	
+<span class="nc" id="L67">			String castDate = envVars.get(Constants.CAST_DATE);</span>
+<span class="nc" id="L68">			String webServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);</span>
+<span class="nc" id="L69">			String appName = envVars.get(Constants.APPLICATION_NAME);</span>
+<span class="nc" id="L70">			String versionName = envVars.get(Constants.VERSION_NAME);</span>
+<span class="nc" id="L71">			String castMSConnectionProfile = envVars.get(Constants.CONNECTION_PROFILE);</span>
+<span class="nc" id="L72">			String workFlow = envVars.get(Constants.WORK_FLOW);</span>
+	
+<span class="nc" id="L74">			boolean failBuild = workFlow.trim().toLowerCase().equals(&quot;no&quot;);</span>
+<span class="nc" id="L75">			listener.getLogger().println(&quot;Web Service: &quot; + webServiceAddress);</span>
+	
+<span class="nc" id="L77">			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();</span>
+<span class="nc" id="L78">			cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);</span>
+			try {
+<span class="nc" id="L80">				CastWebService cbws = cbwsl.getCastWebServicePort();</span>
+	
+<span class="nc" id="L82">				Date dateForToday = Constants.castDateFormat.parse(castDate);</span>
+<span class="nc" id="L83">				String versionNameWithTag = versionName</span>
+						.replace(&quot;[TODAY]&quot;, Constants.dateFormatVersion.format(dateForToday));
+	
+<span class="nc" id="L86">				listener.getLogger().println(String.format(&quot;Application Name: %s&quot;, appName));</span>
+<span class="nc" id="L87">				listener.getLogger().println(String.format(&quot;Version Name: %s&quot;, versionName));</span>
+<span class="nc" id="L88">				listener.getLogger().println(String.format(&quot;Connection Profile Name: %s&quot;, castMSConnectionProfile));</span>
+	
+<span class="nc" id="L90">				VersionInfo vi = RemoteHelper.getVersionInfo(webServiceAddress);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">				if (!checkWebServiceCompatibility(vi.getVersion())) {</span>
+<span class="nc" id="L92">					listener.getLogger().println(</span>
+							String.format(&quot;Incompatible Web Service Version %s (Supported: %s)&quot;, vi.getVersion(),
+									Constants.wsVersionCompatibility));
+<span class="nc" id="L95">					return false || failBuild;</span>
+				}
+	
+				// Accept Deliver
+<span class="nc" id="L99">				startTime = System.nanoTime();</span>
+<span class="nc" id="L100">				Calendar cal = Utils.convertCastDate(castDate);</span>
+	
+<span class="nc" id="L102">				int retryCount = 0;</span>
+<span class="nc" id="L103">				taskId=0;</span>
+				while (true)
+				{
+					try 
+					{
+<span class="nc" id="L108">						taskId = cbws.acceptDelivery(appName, versionName, castMSConnectionProfile, cal);</span>
+<span class="nc" id="L109">				 	 	listener.getLogger().println(&quot;Accepting delivered code ...&quot;);</span>
+<span class="nc" id="L110">						break;</span>
+<span class="nc" id="L111">					} catch (AxisFault af) {</span>
+<span class="nc" id="L112">						retryCount++;</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">						if (retryCount&lt;3)</span>
+						{
+<span class="nc" id="L115">							listener.getLogger().printf(&quot;%d Access fault encountered\n&quot;,retryCount);</span>
+						} else {
+<span class="nc" id="L117">					 	 	listener.getLogger().println(&quot;Aborging, too many access faults encounerd.&quot;);</span>
+<span class="nc" id="L118">					 	 	return false;</span>
+						}
+<span class="nc" id="L120">					}</span>
+				}
+<span class="nc bnc" id="L122" title="All 2 branches missed.">				if (taskId &lt; 0) {</span>
+<span class="nc" id="L123">					listener.getLogger().println(String.format(&quot;Error: %s&quot;, cbws.getErrorMessage(-taskId)));</span>
+<span class="nc" id="L124">					return false || failBuild;</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">				} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {</span>
+<span class="nc" id="L126">					return false;</span>
+				}
+	
+				// Set As Current Version
+<span class="nc" id="L130">				listener.getLogger().println(&quot;&quot;);</span>
+<span class="nc" id="L131">				listener.getLogger().println(&quot;Set As Current Version&quot;);</span>
+<span class="nc" id="L132">				startTime = System.nanoTime();</span>
+<span class="nc" id="L133">				taskId = cbws.setAsCurrentVersion(appName, versionNameWithTag, castMSConnectionProfile, cal);</span>
+	
+<span class="nc bnc" id="L135" title="All 2 branches missed.">				if (taskId &lt; 0) {</span>
+<span class="nc" id="L136">					listener.getLogger().println(String.format(&quot;Error: %s&quot;, cbws.getErrorMessage(-taskId)));</span>
+<span class="nc" id="L137">					return false || failBuild;</span>
+				}
+	
+<span class="nc bnc" id="L140" title="All 2 branches missed.">				if (!Utils.getLog(cbws, taskId, startTime, listener)) {</span>
+<span class="nc" id="L141">					return false;</span>
+				}
+	
+<span class="nc" id="L144">				listener.getLogger().println(&quot; &quot;);</span>
+				
+<span class="nc" id="L146">			} catch (ServiceException | RemoteException | ParseException | HelperException e) {</span>
+<span class="nc" id="L147">				listener.getLogger().println(</span>
+						String.format(&quot;Interrupted after: %s\n%s: %s&quot;,
+								CastUtil.formatNanoTime(System.nanoTime() - startTime), e.getClass().getName(),
+								e.getMessage()));
+<span class="nc" id="L151">				return false || failBuild;</span>
+<span class="nc" id="L152">			}</span>
+		}
+		//are there any remaining steps to run, if so run them now
+<span class="nc bnc" id="L155" title="All 2 branches missed.">		if (!Utils.runJobs(build, launcher, listener, this.getClass(), Constants.RunAcceptDelivery))</span>
+		{
+<span class="nc" id="L157">			return false;</span>
+		}
+<span class="nc" id="L159">		return true;</span>
+	}
+
+	/**
+	 * Descriptor for {@link CastAIPBuilder}. Used as a singleton. The class is
+	 * marked as public so that it can be accessed from views.
+	 *
+	 * &lt;p&gt;
+	 * See
+	 * &lt;tt&gt;src/main/resources/hudson/plugins/hello_world/CastDMTBuilder/*.jelly&lt;/tt&gt;
+	 * for the actual HTML fragment for the configuration screen.
+	 */
+//	@Extension
+//	// This indicates to Jenkins that this is an implementation of an extension
+//	// point.
+//	public static final class DescriptorImpl extends BuildStepDescriptor&lt;Builder&gt;
+//	{
+//
+//		private boolean useDMT;
+//
+//		public DescriptorImpl()
+//		{
+//			load();
+//		}
+//
+//		@SuppressWarnings(&quot;rawtypes&quot;)
+//		public boolean isApplicable(Class&lt;? extends AbstractProject&gt; aClass)
+//		{
+//			// Indicates that this builder can be used with all kinds of project
+//			// types
+//			return true;
+//		}
+//
+//		/**
+//		 * This human readable name is used in the configuration screen.
+//		 */
+//		public String getDisplayName()
+//		{
+//			return &quot;&quot;;
+////			return String.format(&quot;CAST AIP %d: Accept Delivery&quot;, Constants.RunAcceptDelivery)  ;
+//		}
+//
+//		@Override
+//		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
+//		{
+//			useDMT = formData.getBoolean(&quot;useDMT&quot;);
+//			save();
+//			return super.configure(req, formData);
+//		}
+//
+//		public boolean getUseDMT()
+//		{
+//			return useDMT;
+//		}
+//	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.2.201409121644</span></div></body></html>
