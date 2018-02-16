@@ -4,11 +4,8 @@
 	<classpathentry including="**/*.java" kind="src" path="target/generated-sources/localizer"/>
 	<classpathentry excluding="**/*.java" kind="src" path="src/main/resources"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/CastAPI"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/DMTExplore"/>
 	<classpathentry kind="var" path="M2_REPO/javax/servlet/servlet-api/2.4/servlet-api-2.4.jar" sourcepath="M2_REPO/javax/servlet/servlet-api/2.4/servlet-api-2.4-sources.jar"/>
 	<classpathentry kind="var" path="M2_REPO/org/jenkins-ci/main/jenkins-core/1.625.3/jenkins-core-1.625.3.jar"/>
-	<classpathentry kind="src" path="/WSBatchServer"/>
 	<classpathentry kind="var" path="M2_REPO/org/apache/axis/axis/1.4/axis-1.4.jar"/>
 	<classpathentry kind="var" path="M2_REPO/org/jdom/jdom/1.1/jdom-1.1.jar"/>
 	<classpathentry kind="var" path="M2_REPO/org/kohsuke/stapler/stapler/1.231/stapler-1.231.jar"/>
@@ -31,5 +28,7 @@
 			<attribute name="maven.scope" value="compile"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/com.castsoftware.uc.api"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/com.castsoftware.uc.DMTExplore"/>
 	<classpathentry kind="output" path="target/eclipse-classes"/>
 </classpath>

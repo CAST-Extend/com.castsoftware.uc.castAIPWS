@@ -1,0 +1,8 @@
+/target/
+/Version5/
+/work/
+.project
+.classpath
+.metadata
+.settings
+
