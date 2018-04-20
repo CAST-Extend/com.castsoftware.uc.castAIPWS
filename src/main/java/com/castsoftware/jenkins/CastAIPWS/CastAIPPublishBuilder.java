@@ -38,7 +38,7 @@ public class CastAIPPublishBuilder extends Builder
 	{
 		int taskId=0;
 		long startTime = System.nanoTime();
-
+        /*
 		EnvVars envVars = build.getEnvironment(listener);
 		
 		String cmsWebServiceAddress1 = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS); 
@@ -165,7 +165,7 @@ public class CastAIPPublishBuilder extends Builder
 		{
 			return false;
 		}
-
+*/
 		return true;
 	}
 

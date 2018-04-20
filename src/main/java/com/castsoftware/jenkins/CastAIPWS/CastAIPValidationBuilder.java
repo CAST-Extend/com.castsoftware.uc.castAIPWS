@@ -37,11 +37,14 @@ public class CastAIPValidationBuilder extends Builder
 	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException,
 			InterruptedException
 	{
-		long startTime = System.nanoTime();
+		return true;
+		/*long startTime = System.nanoTime();
 		ValidationProbesService vps = null;
-
+ 
 		EnvVars envVars = build.getEnvironment(listener);
 		int startAt;
+		
+		
 		try {
 			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
 		} catch (NumberFormatException e) {
@@ -66,6 +69,8 @@ public class CastAIPValidationBuilder extends Builder
 			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
 			cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
 			boolean pass = true;
+			
+			
 			try {
 				CastWebService cbws = cbwsl.getCastWebServicePort();
                 String validationStopFlag = cbws.getValidationStopFlag();
@@ -85,36 +90,40 @@ public class CastAIPValidationBuilder extends Builder
 				{	
 					vps = new ValidationProbesService(validateionProbURL);
 	
-					StringBuffer output = new StringBuffer();
-					List<ValidationResults> allChecks = vps.runAllChecks(appName, snapshotName); 
+					//StringBuffer output = new StringBuffer();
+					String output1 = new String();
+					//List<ValidationResults> allChecks = cbws.runAllChecks(appName, snapshotName); 
+					output1 = cbws.runAllChecks(appName, snapshotName);
+					StringBuffer output = new StringBuffer(output1); 
+					//output = output1.tos
 					if(validationStopFlag.toLowerCase().equals("true"))
 					{
 					    listener.getLogger().println("Warning: validation.stop flag is set to stop at validation stage");
+					    listener.getLogger().println("Please check AOP Rescan Validation Page for details");
+						listener.getLogger().println(String.format("AOP URL: %s", validateionProbURL));
+					   
+					    if(output1 == "false")
+					    {
+					    	pass = false;
+					    }
+					    else
+					    {
+					    	pass = true;
+					    }
 					} 
 					else
 					{
 						listener.getLogger().println("Warning: validation.stop flag is set to false, hence this application will pass this stage.");
+						listener.getLogger().println("Please check AOP Rescan Validation screen for details");
+						listener.getLogger().println(String.format("AOP URL: %s", validateionProbURL.replace("ValidationProbesService.asmx", "Validation.aspx")));
+						pass = true;
 					}
-					for (ValidationResults result : allChecks) 
-					{
-						output.setLength(0);
-						output.append(result.getCheckNumber()).append("-").append(result.getTestDescription()).append(":")
-								.append(result.getAdvice());
-						listener.getLogger().println(output);
-						 
-						if(validationStopFlag.toLowerCase().equals("true"))
-						{
-							if (result.getAdvice().equals("NO GO")) 
-							{
-								pass = false;
-							}
-						}
-						else
-						{
-						   pass = true;
-						}
-							
-					}
+					listener.getLogger().println("Sending Validation Status Message...");
+					listener.getLogger().println(String.format("Sending completion message: \"%s\" \"%s\" \"%s\" \"%s\" \"%s\"", appName, versionName, castDate,
+							5, pass));
+					cbws.UpdateRescanStatus(appName, versionName, castDate, "Validation - "
+							+ (pass ? "OK" : "Error"), "Validation");
+					
 				}
 			} catch (ServiceException | RemoteException | UnsupportedOperationException | SOAPException
 					| HelperException e) {
@@ -123,9 +132,21 @@ public class CastAIPValidationBuilder extends Builder
 				return false;
 			} finally {
 				listener.getLogger().println(String.format("This application has %s", (pass ? "passed" : "failed")));
-				if (vps != null) {
-					vps.UpdateRescanStatus(appName, versionName, castDate, "Validation - "
-							+ (pass ? "OK" : "Error"), "Validation");
+				
+				if (vps != null) 
+				{
+					CastWebServiceServiceLocator cbwsl1 = new CastWebServiceServiceLocator();
+					cbwsl1.setCastWebServicePortEndpointAddress(webServiceAddress);
+					CastWebService cbws;
+					try {
+						cbws = cbwsl1.getCastWebServicePort();
+						cbws.UpdateRescanStatus(appName, versionName, castDate, "Validation - "
+								+ (pass ? "OK" : "Error"), "Validation");
+					} catch (ServiceException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
 				}
 				listener.getLogger().println(" ");
 			}
@@ -138,9 +159,14 @@ public class CastAIPValidationBuilder extends Builder
 		//logic to show the message here
 		//listener.getLogger().println("Warning: validation.stop flag is set to false, if the flag was set to true, this application would have stopped here.");
 		
+		
 			return pass;
 		}
+		*/
+		
 	}
+	
+	
 	
 	
 

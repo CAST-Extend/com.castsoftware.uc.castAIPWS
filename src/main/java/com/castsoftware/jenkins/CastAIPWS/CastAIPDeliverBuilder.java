@@ -20,9 +20,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.castsoftware.batch.CastWebService;
 import com.castsoftware.batch.CastWebServiceServiceLocator; 
-import com.castsoftware.dmtexplore.DmtExplore;
-import com.castsoftware.dmtexplore.XmlData;
-import com.castsoftware.dmtexplore.data.DeliveryData;
 import com.castsoftware.exception.HelperException;
 import com.castsoftware.jenkins.CastAIPWS.util.Constants;
 import com.castsoftware.jenkins.CastAIPWS.util.Utils;
@@ -42,7 +39,7 @@ public class CastAIPDeliverBuilder extends Builder
 	{ 
 	}
 	 
-	
+/*	
 	private String getPrevDmtVersion(String dmtFolder, String findApp, String rescanType)
 	{  
 		DmtExplore dmtExplore = new DmtExplore(dmtFolder, findApp);
@@ -100,7 +97,7 @@ public class CastAIPDeliverBuilder extends Builder
 		}
 		return prevVersion;
 	}
-	
+*/	
 	void setSchemaNamesInAOP(AbstractBuild build, BuildListener listener, String appName) throws IOException, InterruptedException
 	{
     	EnvVars envVars = build.getEnvironment(listener);
@@ -139,7 +136,7 @@ public class CastAIPDeliverBuilder extends Builder
 
 		EnvVars envVars = build.getEnvironment(listener);
 		
-
+        /*
 
 		String cmsWebServiceAddress1 = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS); 
 		CastWebServiceServiceLocator cbwsl1 = new CastWebServiceServiceLocator();
@@ -179,8 +176,9 @@ public class CastAIPDeliverBuilder extends Builder
 			String dmtWebServiceAddress = envVars.get(Constants.DMT_WEB_SERVICE_ADDRESS);
 			String cmsWebServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS); 
 			String appName = envVars.get(Constants.APPLICATION_NAME,"");
+			String schemaPrefix = envVars.get(Constants.SCHEMA_PREFIX,"");
 
-			setSchemaNamesInAOP(build, listener, appName);
+			//cbws.setSchemaNamesInAOP(appName);
 			
 			String versionName = envVars.get(Constants.VERSION_NAME,"");
 			 
@@ -204,6 +202,10 @@ public class CastAIPDeliverBuilder extends Builder
 				referenceVersion = envVars.get(Constants.REFERENCE_VERSION);
 			}
 
+			
+			
+			
+			
 			boolean isUseJnlp = Boolean.parseBoolean(envVars.get(Constants.RUN_JNLP_DELIVERY));
 			
 			boolean failBuild = workFlow.trim().toLowerCase().equals("no");
@@ -218,13 +220,15 @@ public class CastAIPDeliverBuilder extends Builder
 
 
 			CastWebServiceServiceLocator cbwslc = new CastWebServiceServiceLocator(); 
+			cbwslc.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
 			
-			cbwslc.setCastWebServicePortEndpointAddress(cmsWebServiceAddress);
+			
+			
 			try {
 				CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
-				cbwsl.setCastWebServicePortEndpointAddress(cmsWebServiceAddress);
+				cbwsl.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
 				CastWebService cbws = cbwsl.getCastWebServicePort();
-				
+				cbws.setSchemaNamesInAOP(appName, schemaPrefix);
 				if(strQAScan.toLowerCase().equals("true"))
 				{
 				listener.getLogger().println(String.format("Parsing Delivery folder to identify previous accepted version"));
@@ -262,7 +266,7 @@ public class CastAIPDeliverBuilder extends Builder
 					
 					if (vps != null) 
 						{
-							vps.UpdateRescanStatus(appName, versionName, castDate, "DMT - Error" , "DMT");
+						cbws.UpdateRescanStatus(appName, versionName, castDate, "DMT - Error" , "DMT");
 						}
 					}
 					return false;
@@ -303,7 +307,7 @@ public class CastAIPDeliverBuilder extends Builder
 						
 						if (vps != null) 
 							{
-								vps.UpdateRescanStatus(appName, versionName, castDate, "DMT - Error" , "DMT");
+								cbws.UpdateRescanStatus(appName, versionName, castDate, "DMT - Error" , "DMT");
 							}
 						}
 						return false;
@@ -318,14 +322,13 @@ public class CastAIPDeliverBuilder extends Builder
 				
 				CastWebService cbwsd = cbwsld.getCastWebServicePort();
 				CastWebService cbwsc = cbwslc.getCastWebServicePort();
-				CastWebService cbwsc1 = cbwsldd.getCastWebServicePort();
 
 				if (!Utils.validateWebServiceVersion(dmtWebServiceAddress, listener) ||
 					 !Utils.validateWebServiceVersion(cmsWebServiceAddress, listener) ) {
 					return false;
 				}
   
-				String appId = cbwsc.getApplicationUUID(appName);
+				String appId = cbws.getApplicationUUID(appName);
 				if (appId == null)
 				{
 					listener.getLogger().println("appId unavaliable");
@@ -413,7 +416,7 @@ public class CastAIPDeliverBuilder extends Builder
 		{
 			return false;
 		} 
-		
+		*/
 		return true;
 	}
 	 

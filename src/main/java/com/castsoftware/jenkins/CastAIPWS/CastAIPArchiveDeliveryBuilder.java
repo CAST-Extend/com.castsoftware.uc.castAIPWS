@@ -34,6 +34,10 @@ public class CastAIPArchiveDeliveryBuilder extends Builder
     	int taskId;
     	long startTime = System.nanoTime() ; 
 
+    	// To be added
+    	//String webServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);
+    	// Call web service to Remove from the application list.
+    	/*
 		EnvVars envVars = build.getEnvironment(listener);
 		int startAt;
 		try {
@@ -85,7 +89,7 @@ public class CastAIPArchiveDeliveryBuilder extends Builder
 				return false || failBuild;
 			}
 		}  
-    	
+    	*/
     	return true;
     }
     

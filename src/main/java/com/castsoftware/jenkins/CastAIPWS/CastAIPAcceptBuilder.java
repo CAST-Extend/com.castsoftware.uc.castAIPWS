@@ -48,8 +48,12 @@ public class CastAIPAcceptBuilder extends Builder
 	{
 		int taskId;
 		long startTime = System.nanoTime();
-
-		EnvVars envVars = build.getEnvironment(listener);
+        
+		// Calculate which CMS address to use ?
+		// Publish/Set web service name for future use
+		// Register the application with Web service.
+		
+/*		EnvVars envVars = build.getEnvironment(listener);
 		int startAt;
 		try {
 			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
@@ -66,25 +70,39 @@ public class CastAIPAcceptBuilder extends Builder
 	
 			String castDate = envVars.get(Constants.CAST_DATE);
 			String webServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);
+			String dmtWebServiceAddress = envVars.get(Constants.DMT_WEB_SERVICE_ADDRESS);
 			String appName = envVars.get(Constants.APPLICATION_NAME);
-			String versionName = envVars.get(Constants.VERSION_NAME);
+			String versionName = envVars.get(Constants.VERSION_NAME,"");
 			String castMSConnectionProfile = envVars.get(Constants.CONNECTION_PROFILE);
 			String workFlow = envVars.get(Constants.WORK_FLOW);
-	
 			boolean failBuild = workFlow.trim().toLowerCase().equals("no");
 			listener.getLogger().println("Web Service: " + webServiceAddress);
+			
+			CastWebServiceServiceLocator cbwst = new CastWebServiceServiceLocator();
+			cbwst.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
 	
 			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
 			cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+
+			//CastWebServiceServiceLocator cbwsldmt1 = new CastWebServiceServiceLocator();
+			//cbwsldmt1.setCastWebServicePortEndpointAddress(webServiceAddress);
 			try {
 				CastWebService cbws = cbwsl.getCastWebServicePort();
-	
+				CastWebService cbwstt = cbwst.getCastWebServicePort();
+				//CastWebService cbws_dmt1 = cbwsldmt1.getCastWebServicePort();
+				String deliveryFolder = cbwstt.getDMTDeliveryFolder();
+				
+				String latestDeliveryVersion = cbwstt.getlatestDmtVersion(deliveryFolder, appName, versionName);
 				Date dateForToday = Constants.castDateFormat.parse(castDate);
 				String versionNameWithTag = versionName
 						.replace("[TODAY]", Constants.dateFormatVersion.format(dateForToday));
 	
+
+				listener.getLogger().println(String.format(" Parsing Delivery folder(%s) with Version(%s) to find the latest delivery ",deliveryFolder,versionName ));
+				listener.getLogger().println(String.format(" Latest Delivery is %s ",latestDeliveryVersion ));
+				
 				listener.getLogger().println(String.format("Application Name: %s", appName));
-				listener.getLogger().println(String.format("Version Name: %s", versionName));
+				listener.getLogger().println(String.format("Version Name: %s", latestDeliveryVersion));
 				listener.getLogger().println(String.format("Connection Profile Name: %s", castMSConnectionProfile));
 	
 				VersionInfo vi = RemoteHelper.getVersionInfo(webServiceAddress);
@@ -105,7 +123,7 @@ public class CastAIPAcceptBuilder extends Builder
 				{
 					try 
 					{
-						taskId = cbws.acceptDelivery(appName, versionName, castMSConnectionProfile, cal);
+						taskId = cbws.acceptDelivery(appName, latestDeliveryVersion, castMSConnectionProfile, cal);
 				 	 	listener.getLogger().println("Accepting delivered code ...");
 						break;
 					} catch (AxisFault af) {
@@ -130,7 +148,8 @@ public class CastAIPAcceptBuilder extends Builder
 				listener.getLogger().println("");
 				listener.getLogger().println("Set As Current Version");
 				startTime = System.nanoTime();
-				taskId = cbws.setAsCurrentVersion(appName, versionNameWithTag, castMSConnectionProfile, cal);
+				//taskId = cbws.setAsCurrentVersion(appName, versionNameWithTag, castMSConnectionProfile, cal);
+				//taskId = cbws.setAsCurrentVersion(appName, latestDeliveryVersion, castMSConnectionProfile, cal);
 	
 				if (taskId < 0) {
 					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
@@ -156,6 +175,7 @@ public class CastAIPAcceptBuilder extends Builder
 		{
 			return false;
 		}
+		*/
 		return true;
 	}
 

@@ -47,7 +47,7 @@ public class CastAIPSnapshotBuilder extends Builder
 		long startTime = System.nanoTime();
 
 		EnvVars envVars = build.getEnvironment(listener);
-		
+		/*
 		
 
 		String cmsWebServiceAddress1 = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS); 
@@ -269,7 +269,7 @@ public class CastAIPSnapshotBuilder extends Builder
 		}
 		}
 		
-		
+		*/
 		return true;
 	}
 
