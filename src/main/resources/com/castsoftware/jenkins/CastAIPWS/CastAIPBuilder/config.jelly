@@ -5,12 +5,24 @@
 		<f:entry title="Delivery Web Service Address" field="dmtWebServiceAddress">
 		    <f:textbox />
 		</f:entry>
-		<f:entry title="Analysis Web Service Address" field="cmsWebServiceAddress">
+		<f:entry title="Analysis Web Service Address 1" field="cmsWebServiceAddress1">
 		   <f:textbox />
 		</f:entry>
+		<f:entry title="Analysis Web Service Address 2" field="cmsWebServiceAddress2">
+		   <f:textbox />
+		</f:entry>
+		<f:entry title="Analysis Web Service Address 3" field="cmsWebServiceAddress3">
+		   <f:textbox />
+		</f:entry>
+		<f:entry title="Analysis Web Service Address 4" field="cmsWebServiceAddress4">
+		   <f:textbox />
+		</f:entry>
+		<f:entry title="Analysis Web Service Address 5" field="cmsWebServiceAddress5">
+		   <f:textbox />
+		</f:entry>								
 		<f:validateButton
 		   title="Test Connection" progress="Testing..."
-		   method="testConnection" with="dmtWebServiceAddress,cmsWebServiceAddress" />
+		   method="testConnection" with="dmtWebServiceAddress,cmsWebServiceAddress1,cmsWebServiceAddress2,cmsWebServiceAddress3,cmsWebServiceAddress4,cmsWebServiceAddress5" />
   	</f:section>
   
 	<f:section title="Application Configuration Information" >
@@ -52,9 +64,6 @@
 		</f:block>  
 		<f:block>
     		<f:optionalBlock field="adBlock" title="Accept Delivery" checked="${instance.ad}"/>    
-		</f:block>  
-		<f:block>
-    		<f:optionalBlock field="dcvBlock" title="Make Delivery Current Version" checked="${instance.dcv}"/>    
 		</f:block>  
 		<f:block>
     		<f:optionalBlock field="raBlock" title="Run Analysis" checked="${instance.ra}"/>	  

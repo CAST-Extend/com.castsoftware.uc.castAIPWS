@@ -32,6 +32,7 @@ public class CastAIPFinalBuilder extends Builder
 	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException,
 			InterruptedException
 	{
+		/*
 		EnvVars envVars = build.getEnvironment(listener);
 
 		String castDate = envVars.get(Constants.CAST_DATE);
@@ -51,12 +52,13 @@ public class CastAIPFinalBuilder extends Builder
 				listener.getLogger().println("Warning: Connection to AOP is not configured");
 			} else {	
 				ValidationProbesService vps = new ValidationProbesService(validateionProbURL);
-				vps.UpdateRescanStatus(appName, versionName, castDate, "Rescan Success", "Rescan Success");
+				cbws.UpdateRescanStatus(appName, versionName, castDate, "Rescan Success", "Rescan Success");
 			}
 		} catch (ServiceException | UnsupportedOperationException | SOAPException e) {
 			listener.getLogger().println(
 					String.format("%s error accured while finalizing analysis job.", e.getMessage()));
 		}
+		*/
 
 		return true;
 	}

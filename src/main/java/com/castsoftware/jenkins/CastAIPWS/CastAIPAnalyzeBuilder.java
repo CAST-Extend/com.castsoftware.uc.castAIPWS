@@ -38,6 +38,7 @@ public class CastAIPAnalyzeBuilder extends Builder
     	int taskId;
     	long startTime = System.nanoTime() ; 
 
+    	/*
 		EnvVars envVars = build.getEnvironment(listener);
 		
 		
@@ -61,9 +62,9 @@ public class CastAIPAnalyzeBuilder extends Builder
 		    	String webServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);
 		    	String castDate = envVars.get(Constants.CAST_DATE);
 		    	String appName = envVars.get(Constants.APPLICATION_NAME);
-		    	
+		    	String schemaPrefix = envVars.get(Constants.SCHEMA_PREFIX,"");
 
-				setSchemaNamesInAOP(build, listener, appName);
+		    
 				
 				
 		    	String dbPrefix = envVars.get(Constants.SCHEMA_PREFIX);
@@ -75,6 +76,7 @@ public class CastAIPAnalyzeBuilder extends Builder
 		        CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
 				cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
 				CastWebService cbws = cbwsl.getCastWebServicePort();
+				cbws.setSchemaNamesInAOP(appName, schemaPrefix);
 				CastWebService cbws12 = cbwsl.getCastWebServicePort();
 				Calendar cal = Utils.convertCastDate(castDate);
 				
@@ -148,7 +150,8 @@ public class CastAIPAnalyzeBuilder extends Builder
 	        		return runStatus;
 	        	}
 	
-			} catch (IOException | ServiceException | ParseException e) {
+			} catch (IOException | ServiceException | ParseException e) 
+			{
 				listener.getLogger().println(
 						String.format("Interrupted after: %s\n%s: %s", 
 								CastUtil.formatNanoTime(System.nanoTime() - startTime),
@@ -167,6 +170,8 @@ public class CastAIPAnalyzeBuilder extends Builder
 			return false;
 		}
 		listener.getLogger().println("All Analysis jobs ran successfully");
+		
+		*/
     	return true;
     }
     

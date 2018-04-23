@@ -28,6 +28,11 @@ public class Constants
 	static public final String CAST_DATE="CAST_DATE";
 	static public final String DMT_WEB_SERVICE_ADDRESS="CAST_DMT_WEB_SERVICE_ADDRESS";
 	static public final String CMS_WEB_SERVICE_ADDRESS="CAST_CMS_WEB_SERVICE_ADDRESS";
+	static public final String CMS_WEB_SERVICE_ADDRESS1="CAST_CMS_WEB_SERVICE_ADDRESS1";
+	static public final String CMS_WEB_SERVICE_ADDRESS2="CAST_CMS_WEB_SERVICE_ADDRESS2";
+	static public final String CMS_WEB_SERVICE_ADDRESS3="CAST_CMS_WEB_SERVICE_ADDRESS3";
+	static public final String CMS_WEB_SERVICE_ADDRESS4="CAST_CMS_WEB_SERVICE_ADDRESS4";
+	static public final String CMS_WEB_SERVICE_ADDRESS5="CAST_CMS_WEB_SERVICE_ADDRESS5";
 	static public final String APPLICATION_NAME="CAST_APPL_NAME";
 	static public final String VERSION_NAME="CAST_APPL_VERSION";
 	static public final String VERSION_NAME_PROD="CAST_APPL_VERSION_PROD";

@@ -1,18 +1,29 @@
 package com.castsoftware.jenkins.CastAIPWS;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.rmi.RemoteException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
+import javax.jws.WebMethod;
 import javax.servlet.ServletException;
 import javax.xml.rpc.ServiceException;
 import javax.xml.soap.SOAPException;
 
+import org.apache.axis.AxisFault;
+import org.apache.axis.utils.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -20,7 +31,6 @@ import org.kohsuke.stapler.StaplerRequest;
 import com.castsoftware.batch.CastWebService;
 import com.castsoftware.batch.CastWebServiceServiceLocator;
 import com.castsoftware.exception.HelperException;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPBuilder.DescriptorImpl;
 import com.castsoftware.jenkins.CastAIPWS.util.AdBlock;
 import com.castsoftware.jenkins.CastAIPWS.util.ArchiveBlock;
 import com.castsoftware.jenkins.CastAIPWS.util.BackupBlock;
@@ -31,13 +41,18 @@ import com.castsoftware.jenkins.CastAIPWS.util.RaBlock;
 import com.castsoftware.jenkins.CastAIPWS.util.RsBlock;
 import com.castsoftware.jenkins.CastAIPWS.util.RsvBlock;
 import com.castsoftware.jenkins.CastAIPWS.util.Utils;
+import com.castsoftware.jenkins.data.Snapshot;
 import com.castsoftware.jenkins.util.EnvTemplater;
 import com.castsoftware.jenkins.util.PublishEnvVarAction;
 import com.castsoftware.profiles.ConnectionProfile;
+import com.castsoftware.restapi.JsonResponse;
 import com.castsoftware.util.CastUtil;
 import com.castsoftware.util.VersionInfo;
 import com.castsoftware.vps.ValidationProbesService;
+import com.castsoftware.vps.vo.ValidationResults;
 import com.castsoftware.webservice.RemoteHelper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import hudson.EnvVars;
 import hudson.Extension;
@@ -48,26 +63,28 @@ import hudson.model.BuildListener;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
-import hudson.util.*;
+import hudson.util.ListBoxModel;
 import net.sf.json.JSONObject;
 
-public class CastAIPBuilder extends Builder
-{
+public class CastAIPBuilder extends Builder {
 	private final String dmtWebServiceAddress;
-	private final String cmsWebServiceAddress;
+	private String cmsWebServiceAddress;
+	private final String cmsWebServiceAddress1;
+	private final String cmsWebServiceAddress2;
+	private final String cmsWebServiceAddress3;
+	private final String cmsWebServiceAddress4;
+	private final String cmsWebServiceAddress5;
 	private final String appName;
 	private final String versionName;
 	private final String referenceVersion;
 
-	private final String referenceVersionPROD; 
-	
+	private final String referenceVersionPROD;
+
 	private final String castMSConnectionProfile;
 	private final String schemaPrefix;
 	private final String aadSchemaName;
 	private final String retentionPolicy;
 	private String lastRunDate;
-	
-	
 
 	private final boolean backup;
 	private final boolean da;
@@ -79,6 +96,7 @@ public class CastAIPBuilder extends Builder
 	private final boolean publish;
 	private final boolean optimize;
 	private final boolean useJnlp;
+	public static Map<String, Integer> map = new HashMap<String, Integer>();
 
 	// private final String snapshotName;
 	// private final String captureDate;
@@ -87,15 +105,19 @@ public class CastAIPBuilder extends Builder
 	// Fields in config.jelly must match the parameter names in the
 	// "DataBoundConstructor"
 	@DataBoundConstructor
-	public CastAIPBuilder(String dmtWebServiceAddress, String cmsWebServiceAddress, String appName,
+	public CastAIPBuilder(String dmtWebServiceAddress, String cmsWebServiceAddress1, String cmsWebServiceAddress2,
+			String cmsWebServiceAddress3, String cmsWebServiceAddress4, String cmsWebServiceAddress5, String appName,
 			String referenceVersion, String versionName, String castMSConnectionProfile, BackupBlock backupBlock,
 			AdBlock daBlock, AdBlock adBlock, RaBlock raBlock, RsBlock rsBlock, RsvBlock ravBlock,
 			PublishBlock publishBlock, ArchiveBlock archiveBlock, OptimizeBlock optimizeBlock, String workFlow,
 			String schemaPrefix, String aadSchemaName, String lastRunDate, String retentionPolicy, boolean useJnlp,
-			String referenceVersionPROD)
-	{
+			String referenceVersionPROD) {
 		this.dmtWebServiceAddress = dmtWebServiceAddress;
-		this.cmsWebServiceAddress = cmsWebServiceAddress;
+		this.cmsWebServiceAddress1 = cmsWebServiceAddress1;
+		this.cmsWebServiceAddress2 = cmsWebServiceAddress2;
+		this.cmsWebServiceAddress3 = cmsWebServiceAddress3;
+		this.cmsWebServiceAddress4 = cmsWebServiceAddress4;
+		this.cmsWebServiceAddress5 = cmsWebServiceAddress5;
 		this.appName = appName;
 		this.versionName = versionName;
 		this.referenceVersion = referenceVersion;
@@ -104,9 +126,10 @@ public class CastAIPBuilder extends Builder
 		this.aadSchemaName = aadSchemaName;
 		this.workFlow = workFlow;
 		this.lastRunDate = lastRunDate;
-		this.referenceVersionPROD = referenceVersionPROD; 
-		this.useJnlp=useJnlp;
-		
+		this.referenceVersionPROD = referenceVersionPROD;
+		this.useJnlp = useJnlp;
+		map.put("a", 1);
+
 		// Publish snapshot
 		if (backupBlock != null) {
 			this.backup = true;
@@ -137,10 +160,10 @@ public class CastAIPBuilder extends Builder
 
 		// Run Snapshot
 		if (rsBlock != null) {
-			this.retentionPolicy=retentionPolicy;
+			this.retentionPolicy = retentionPolicy;
 			this.rs = true;
 		} else {
-			this.retentionPolicy="";
+			this.retentionPolicy = "";
 			this.rs = false;
 		}
 
@@ -173,23 +196,19 @@ public class CastAIPBuilder extends Builder
 		}
 	}
 
-	public boolean isUseJnlp()
-	{
+	public boolean isUseJnlp() {
 		return useJnlp;
 	}
-	
-	private Boolean checkWebServiceCompatibility(String version)
-	{
+
+	private Boolean checkWebServiceCompatibility(String version) {
 		return Constants.wsVersionCompatibility.equals(version);
 	}
 
-	public String getDmtWebServiceAddress()
-	{
+	public String getDmtWebServiceAddress() {
 		return dmtWebServiceAddress;
 	}
 
-	public String getCmsWebServiceAddress()
-	{
+	public String getCmsWebServiceAddress() {
 		String retVal = "";
 		if (cmsWebServiceAddress == null || cmsWebServiceAddress.isEmpty()) {
 			retVal = dmtWebServiceAddress;
@@ -199,189 +218,144 @@ public class CastAIPBuilder extends Builder
 		return retVal;
 	}
 
-	public String getAadSchemaName()
-	{
+	public void setCmsWebServiceAddress(String cmsWebServiceAddress) {
+		this.cmsWebServiceAddress = cmsWebServiceAddress;
+	}
+
+	public String getCmsWebServiceAddress1() {
+		String retVal = "";
+		if (cmsWebServiceAddress1 == null || cmsWebServiceAddress1.isEmpty()) {
+			retVal = dmtWebServiceAddress;
+		} else {
+			retVal = cmsWebServiceAddress1;
+		}
+		return retVal;
+	}
+
+	public String getCmsWebServiceAddress2() {
+		return cmsWebServiceAddress2;
+	}
+
+	public String getCmsWebServiceAddress3() {
+		return cmsWebServiceAddress3;
+	}
+
+	public String getCmsWebServiceAddress4() {
+		return cmsWebServiceAddress4;
+	}
+
+	public String getCmsWebServiceAddress5() {
+		return cmsWebServiceAddress5;
+	}
+
+	public String getAadSchemaName() {
 		return aadSchemaName;
 	}
 
-	public String getSchemaPrefix()
-	{
+	public String getSchemaPrefix() {
 		return schemaPrefix.toLowerCase();
 	}
-	 
 
-	public String getAppName()
-	{
+	public String getAppName() {
 		return appName;
 	}
 
-	public String getVersionName()
-	{
+	public String getVersionName() {
 		return versionName;
 	}
 
-	public String getReferenceVersion()
-	{
-		if(referenceVersion == null)
-		{
+	public String getReferenceVersion() {
+		if (referenceVersion == null) {
 			return "Ref";
-		}
-		else
-		{
+		} else {
 			return referenceVersion;
 		}
 	}
 
-	public String getReferenceVersionPROD()
-	{
-		if(referenceVersionPROD == null)
-		{
+	public String getReferenceVersionPROD() {
+		if (referenceVersionPROD == null) {
 			return "Ref";
-		}
-		else
-		{
+		} else {
 			return referenceVersionPROD;
-		} 
+		}
 	}
 
-	public String getCastMSConnectionProfile()
-	{
+	public String getCastMSConnectionProfile() {
 		return castMSConnectionProfile;
 	}
 
-	public boolean isBackup()
-	{
+	public boolean isBackup() {
 		return backup;
 	}
 
-	public boolean isDa()
-	{
+	public boolean isDa() {
 		return da;
 	}
 
-	public boolean isAaws()
-	{
+	public boolean isAaws() {
 		return da;
 	}
 
-	public boolean isOptimize()
-	{
+	public boolean isOptimize() {
 		return optimize;
 	}
 
-	public boolean isAd()
-	{
+	public boolean isAd() {
 		return ad;
 	}
 
-	public boolean isRa()
-	{
+	public boolean isRa() {
 		return ra;
 	}
 
-	public boolean isRs()
-	{
+	public boolean isRs() {
 		return rs;
 	}
 
-	public boolean isRav()
-	{
+	public boolean isRav() {
 		return rav;
 	}
 
-	public boolean isArchive()
-	{
+	public boolean isArchive() {
 		return archive;
 	}
 
-	public String getRetentionPolicy()
-	{
-		return retentionPolicy==null?"":retentionPolicy;
+	public String getRetentionPolicy() {
+		return retentionPolicy == null ? "" : retentionPolicy;
 	}
 
-	public boolean isPublish()
-	{
+	public boolean isPublish() {
 		return publish;
 	}
 
-	
+	public String getVersionNameWithTag(Date date, EnvVars envVars, String qaScan) {
 
-	public String getVersionNameWithTag(Date date, EnvVars envVars, String strQAScan)
-	{ 
-		
-			String rescanType;
-			try {
-				rescanType = envVars.get(Constants.RESCAN_TYPE);
-			} catch (Exception e) {
-				rescanType = "PROD";
+		String rescanType;
+		rescanType = envVars.get(Constants.RESCAN_TYPE, "PROD");
+
+		String s = versionName.replace("[TODAY]", Constants.dateFormatVersion.format(date));
+
+		if (s.contains("[RESCAN_TYPE]")) {
+			if (qaScan.toLowerCase().equals("true")) {
+				s = s.replace("[RESCAN_TYPE]", rescanType);
+			} else {
+				s = s.replace("[RESCAN_TYPE]", "");
 			}
-			
-			String s = versionName.replace("[TODAY]", Constants.dateFormatVersion.format(date));
-			
-			if(s.contains("[SCAN_TYPE]"))
-			{
-				if(strQAScan == "True")
-				{
-				s = s.replace("[SCAN_TYPE]", rescanType);
-				}
-				else
-				{
-					s = s.replace("[SCAN_TYPE]", "");
-				}
-			}
-			
-			EnvTemplater jEnv = new EnvTemplater(envVars);
-			s = jEnv.templateString(s);
-	
-			return s;
+		}
+
+		EnvTemplater jEnv = new EnvTemplater(envVars);
+		s = jEnv.templateString(s);
+
+		return s;
 	}
 
-	public String getWorkFlow()
-	{
+	public String getWorkFlow() {
 		return workFlow;
 	}
 
-//	public ListBoxModel doFillAppNameItems(@QueryParameter("dmtWebServiceAddress") final String webServiceAddress)
-//	{
-//		ListBoxModel m = new ListBoxModel();
-//
-//		try {
-//			Collection<String> apps = RemoteHelper.listApplications(webServiceAddress);
-//
-//			for (String app : apps) {
-//				m.add(app);
-//			}
-//
-//		} catch (HelperException e) {
-//			return m;
-//		}
-//		return m;
-//	}
-
-//	public ListBoxModel doFillCastMSConnectionProfileItems(
-//			@QueryParameter("cmsWebServiceAddress") final String webServiceAddress)
-//	{
-//		ListBoxModel m = new ListBoxModel();
-//
-//		List<String> logNames = (List<String>) LogManager.getLogManager().getLoggerNames();
-//
-//		try {
-//			Collection<ConnectionProfile> cpList = RemoteHelper.listConnectionProfiles(webServiceAddress);
-//
-//			for (ConnectionProfile cp : cpList) {
-//				m.add(cp.getName(), cp.getName());
-//			}
-//
-//		} catch (HelperException e) {
-//			return m;
-//		}
-//		return m;
-//	}
-	
 	@SuppressWarnings("rawtypes")
-	public boolean publishVariables(AbstractBuild build, BuildListener listener, String castDate, String strQAScan) throws IOException,
-			InterruptedException
-	{
+	public boolean publishVariables(AbstractBuild build, BuildListener listener, String castDate, String rescanType)
+			throws IOException, InterruptedException {
 		boolean rslt = true;
 		Date dateForToday;
 		try {
@@ -394,15 +368,25 @@ public class CastAIPBuilder extends Builder
 			build.addAction(new PublishEnvVarAction(Constants.DMT_WEB_SERVICE_ADDRESS, getDmtWebServiceAddress()));
 			build.addAction(new PublishEnvVarAction(Constants.CMS_WEB_SERVICE_ADDRESS, getCmsWebServiceAddress()));
 			build.addAction(new PublishEnvVarAction(Constants.APPLICATION_NAME, getAppName()));
-			build.addAction(new PublishEnvVarAction(Constants.VERSION_NAME,	getVersionNameWithTag(dateForToday, envVars, strQAScan)));
-			
+			build.addAction(new PublishEnvVarAction(Constants.VERSION_NAME,
+					getVersionNameWithTag(dateForToday, envVars, rescanType)));
+
+			boolean nullCheck = StringUtils.isEmpty(rescanType);
+			/*
+			 * if (nullCheck == true) { build.addAction(new
+			 * PublishEnvVarAction(Constants.VERSION_NAME,
+			 * getVersionNameWithTag(dateForToday, envVars, rescanType))); }
+			 * else { build.addAction(new
+			 * PublishEnvVarAction(Constants.VERSION_NAME, rescanType +
+			 * getVersionNameWithTag(dateForToday, envVars, rescanType))); }
+			 */
 			build.addAction(new PublishEnvVarAction(Constants.AAD_SCHEMA_NAME, getAadSchemaName()));
 			build.addAction(new PublishEnvVarAction(Constants.SCHEMA_PREFIX, getSchemaPrefix()));
 			build.addAction(new PublishEnvVarAction(Constants.CONNECTION_PROFILE, getCastMSConnectionProfile()));
 			build.addAction(new PublishEnvVarAction(Constants.SNAPSHOT_NAME, snapshotName));
 
 			build.addAction(new PublishEnvVarAction(Constants.RETENTION_POLICY, getRetentionPolicy()));
-			
+
 			build.addAction(new PublishEnvVarAction(Constants.WORK_FLOW, getWorkFlow()));
 			build.addAction(new PublishEnvVarAction(Constants.REFERENCE_VERSION, getReferenceVersion()));
 			build.addAction(new PublishEnvVarAction(Constants.REFERENCE_VERSION_PROD, getReferenceVersionPROD()));
@@ -418,7 +402,7 @@ public class CastAIPBuilder extends Builder
 			build.addAction(new PublishEnvVarAction(Constants.RUN_OPTIMIZE_DATABASE, Boolean.toString(isOptimize())));
 			build.addAction(new PublishEnvVarAction(Constants.RUN_ARCHIVE_DELIVERY, Boolean.toString(isArchive())));
 			build.addAction(new PublishEnvVarAction(Constants.RUN_JNLP_DELIVERY, Boolean.toString(isUseJnlp())));
-			
+
 			rslt = Utils.validateBuildVariables(build, listener);
 
 		} catch (ParseException e) {
@@ -428,8 +412,7 @@ public class CastAIPBuilder extends Builder
 		return rslt;
 	}
 
-	public int getStartAt(AbstractBuild build, BuildListener listener)
-	{
+	public int getStartAt(AbstractBuild build, BuildListener listener) {
 		try {
 			EnvVars envVars = build.getEnvironment(listener);
 			return Integer.parseInt(envVars.get(Constants.START_AT));
@@ -439,8 +422,7 @@ public class CastAIPBuilder extends Builder
 
 	}
 
-	public String getRescanType(AbstractBuild build, BuildListener listener)
-	{
+	public String getRescanType(AbstractBuild build, BuildListener listener) {
 		try {
 			EnvVars envVars = build.getEnvironment(listener);
 			return envVars.get(Constants.RESCAN_TYPE);
@@ -450,239 +432,1620 @@ public class CastAIPBuilder extends Builder
 
 	}
 
-	public String getLastRunDate()
-	{
+	public String getLastRunDate() {
 		return lastRunDate;
 	}
-	public void setLastRunDate(String lastRunDate)
-	{
+
+	public void setLastRunDate(String lastRunDate) {
 		this.lastRunDate = lastRunDate;
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
-	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException,
-			InterruptedException
-	{
+	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+
 		long startTime = System.nanoTime();
 		EnvVars envVars = build.getEnvironment(listener);
-		
+
 		CastWebServiceServiceLocator cbwsl1 = new CastWebServiceServiceLocator();
-		cbwsl1.setCastWebServicePortEndpointAddress(cmsWebServiceAddress);
+		cbwsl1.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
 		CastWebService cbws = null;
 		try {
 			cbws = cbwsl1.getCastWebServicePort();
 		} catch (ServiceException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+
 		String strQAScan = cbws.getQAScanFlag();
-		
-		
+
 		String rescanType = getRescanType(build, listener);
-		
+
 		// calculate castDate
 		int startAt = getStartAt(build, listener);
 		String lastRunDate = getLastRunDate();
 
 		// handle start at here
-		//calculate cast date
+		// calculate cast date
 		String castDate = envVars.get(Constants.CAST_DATE);
 		if (startAt > 0) {
 			if (castDate == null || castDate.isEmpty()) {
-				if (lastRunDate == null || lastRunDate.isEmpty()) 
-				{
-					castDate = Constants.castDateFormat.format(new Date());				
+				if (lastRunDate == null || lastRunDate.isEmpty()) {
+					castDate = Constants.castDateFormat.format(new Date());
 				} else {
-					castDate = lastRunDate;									
+					castDate = lastRunDate;
 				}
 			} else {
 				lastRunDate = castDate;
 			}
 		} else { // new run, start at is zero
-			castDate = Constants.castDateFormat.format(new Date());				
+			castDate = Constants.castDateFormat.format(new Date());
 			lastRunDate = castDate;
-			
-			if(strQAScan.toLowerCase().equals("true"))
-			{
-				setCurrentScanType(build, listener, getAppName(),rescanType);
+		}
+
+		if (strQAScan.toLowerCase().equals("true")) {
+			if (rescanType != null) {
+				cbws.setCurrentScanType(getAppName(), rescanType);
 			}
 		}
-		setLastRunDate(lastRunDate);
-		setSchemaNamesInAOP(build, listener, getAppName());
 		
+		setLastRunDate(lastRunDate);
+		cbws.setSchemaNamesInAOP(appName, schemaPrefix);
+
 		if (!publishVariables(build, listener, castDate, strQAScan)) {
 			return false;
 		}
-		
-		
-		
-		
+
 		listener.getLogger().println("****CAST Application Inteligence Platform****");
 
 		listener.getLogger().println(String.format("START_AT: %d", startAt));
 		listener.getLogger().println(String.format("CAST_DATE: %s", castDate));
-		if(strQAScan.toLowerCase().equals("true"))
-		{
-		listener.getLogger().println(String.format("RESCAN_TYPE: %s", rescanType));
+		if (strQAScan.toLowerCase().equals("true")) {
+			listener.getLogger().println(String.format("RESCAN_TYPE: %s", rescanType));
+		} else {
+			listener.getLogger().println(String.format(
+					"Quality Scans disabled. To enable, change the qa.scan flag to true in the properties file"));
 		}
-		else 
-		{
-			listener.getLogger().println(String.format("Quality Scans disabled. To enable, change the qa.scan flag to true in the properties file"));
-		}
-		
+
 		boolean failBuild = getWorkFlow().trim().toLowerCase().equals("no");
 
 		listener.getLogger().println(String.format("DMT Web Service Address:  %s", getDmtWebServiceAddress()));
-		listener.getLogger().println(String.format("CMS Web Service Address:  %s", getCmsWebServiceAddress()));
-		
-		try
-		{
-			
-		
-		//Create Job list and run the first job
-		CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
-		cbwsl.setCastWebServicePortEndpointAddress(getCmsWebServiceAddress());
+		// listener.getLogger().println(String.format("CMS Web Service Address:
+		// %s", getCmsWebServiceAddress()));
+
 		try {
-			if (!Utils.validateWebServiceVersion(getCmsWebServiceAddress(), listener)) {
-				return false;
+
+			// Create Job list and run the first job
+			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+			cbwsl.setCastWebServicePortEndpointAddress(getDmtWebServiceAddress());
+			try {
+				if (!Utils.validateWebServiceVersion(getDmtWebServiceAddress(), listener)) {
+					return false;
+				}
+
+				listener.getLogger().println(String.format("Sending Jenkins Console URL to AOP"));
+				EnvVars envVars1 = build.getEnvironment(listener);
+				String jobName = envVars1.get("JOB_NAME");
+				String buildNo = envVars1.get("BUILD_NUMBER");
+				String consoleURL = String.format("job/%s/%s/console",jobName,buildNo);
+				// Send Jenkins Console location to AOP
+				cbws.sendJenkinsConsolURL(appName, castDate, consoleURL);
+
+				listener.getLogger().println(String.format("Sent Console URL to AOP"));
+
+				if (!runSelectedTasks(build, launcher, listener)) {
+					return false || failBuild;
+
+				}
+
+				// if (!Utils.runJobs(build, launcher, listener,
+				// this.getClass(), -1))
+				// {
+				// return false || failBuild;
+				// }
+				//
+			} catch (HelperException | UnsupportedOperationException e) {
+				listener.getLogger()
+						.println(String.format("Interrupted after: %s\n%s: %s",
+								CastUtil.formatNanoTime(System.nanoTime() - startTime), e.getClass().getName(),
+								e.getMessage()));
+				return false || failBuild;
 			}
 
-			listener.getLogger().println(String.format("Sending Jenkins Console URL to AOP"));
-			
-			
-			//Send Jenkins Console location to AOP
-			sendJenkinsConsolURL(build, listener, getAppName(),castDate);
-			
-			listener.getLogger().println(String.format("Sent Console URL to AOP"));
-			
-			if (!Utils.runJobs(build, launcher, listener, this.getClass(), -1))
-			{
-					return false || failBuild;
-			}
-			
-		} catch (RemoteException | InterruptedException | HelperException | UnsupportedOperationException e) {
-			listener.getLogger().println(
-					String.format("Interrupted after: %s\n%s: %s",
-							CastUtil.formatNanoTime(System.nanoTime() - startTime), e.getClass().getName(),
-							e.getMessage()));
-			return false || failBuild;
-		}
-		return true;}
-		catch(Exception ex)
-		{
+		} catch (Exception ex) {
 			listener.getLogger().println(String.format("Exception:  %s", ex.getMessage()));
 			return false || failBuild;
 		}
+
+		return true;
 	}
-	
-	/**
-	 * Set current scan type from AOP
-	 * @param appName 
-	 */
-	void setSchemaNamesInAOP(AbstractBuild build, BuildListener listener, String appName)
-	{
-		String webServiceAddress = getCmsWebServiceAddress();
-	    String schemaPrefix = getSchemaPrefix();
-		CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
-		cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
-		
+
+	public int addApplJnk(BuildListener listener, String cmsWebAddr) {
+		int val = 0;
+		if (map.containsKey(cmsWebAddr)) {
+			val = map.get(cmsWebAddr);
+			map.put(cmsWebAddr, val + 1);
+		} else {
+			map.put(cmsWebAddr, 1);
+		}
+		listener.getLogger().println(String.format("Added 1 in count of analysis server: %s", cmsWebAddr));
+		listener.getLogger().println(String.format("Application count: %d", val + 1));
+		return val + 1;
+	}
+
+	public int deleteApplJnk(BuildListener listener, String cmsWebAddr) {
+		int val = 0;
+		if (map.containsKey(cmsWebAddr)) {
+			val = map.get(cmsWebAddr);
+			map.put(cmsWebAddr, val - 1);
+		}
+		listener.getLogger().println(String.format("Deleted 1 in count of analysis server: %s", cmsWebAddr));
+		listener.getLogger().println(String.format("Application count: %d", val - 1));
+		if ((val - 1) < 0) {
+			return 0;
+		}
+		return val - 1;
+	}
+
+	public int getApplCountJnk(BuildListener listener, String cmsWebAddr) {
+		int val = 0;
+		if (map.containsKey(cmsWebAddr)) {
+			val = map.get(cmsWebAddr);
+		}
+		listener.getLogger().println(String.format("Current analysis server: %s,    Application count: %d", cmsWebAddr, val));
+		return val;
+	}
+
+	public int resetApplCountJnk() {
+		return 0;
+	}
+
+	private boolean setMinLoadedCmsAnalServer(BuildListener listener) {
+		boolean rslt = true;
+
+		LinkedHashSet<String> cmsSet = new LinkedHashSet<String>();
+		if (getCmsWebServiceAddress1() != null && !getCmsWebServiceAddress1().isEmpty()) {
+			cmsSet.add(getCmsWebServiceAddress1());
+		}
+		if (getCmsWebServiceAddress2() != null && !getCmsWebServiceAddress2().isEmpty()) {
+			cmsSet.add(getCmsWebServiceAddress2());
+		}
+		if (getCmsWebServiceAddress3() != null && !getCmsWebServiceAddress3().isEmpty()) {
+			cmsSet.add(getCmsWebServiceAddress3());
+		}
+		if (getCmsWebServiceAddress4() != null && !getCmsWebServiceAddress4().isEmpty()) {
+			cmsSet.add(getCmsWebServiceAddress4());
+		}
+		if (getCmsWebServiceAddress5() != null && !getCmsWebServiceAddress5().isEmpty()) {
+			cmsSet.add(getCmsWebServiceAddress5());
+		}
+
 		try {
-			CastWebService cbws = cbwsl.getCastWebServicePort();
-			
-			String validateionProbURL = cbws.getValidationProbURL();
-			if (validateionProbURL==null || validateionProbURL.isEmpty()) {
-				listener.getLogger().println("Warning: Connection to AOP is not configured - schema names not updated");
-			} else {	
-				ValidationProbesService vps = new ValidationProbesService(validateionProbURL);
-				
-				EnvVars envVars = build.getEnvironment(listener); 
-				vps.setSchemaNamesInAOP(appName, schemaPrefix);
-				
-				
+			int minValue = 10000;
+			String minLdCmsAnalServer = "";
+			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+
+			String[] cmsWebAddrs = cmsSet.toArray(new String[cmsSet.size()]);
+
+			for (int i = 0; i < cmsWebAddrs.length; i++) {
+				String cmsWebAddr = cmsWebAddrs[i];
+				if (cmsWebAddr != null && !cmsWebAddr.isEmpty()) {
+					cbwsl.setCastWebServicePortEndpointAddress(cmsWebAddr);
+					CastWebService cbws = cbwsl.getCastWebServicePort();
+					// int curValue = cbws.getApplCount();
+					int curValue = getApplCountJnk(listener, cmsWebAddr);
+					if (curValue < minValue) {
+						minValue = curValue;
+						minLdCmsAnalServer = cmsWebAddr;
+					}
+				}
 			}
-		} catch (ServiceException | UnsupportedOperationException | SOAPException | IOException | InterruptedException e) {
-			listener.getLogger().println("Error reading schema prefix from Jenkins");
+			listener.getLogger().println(String.format("Minimum loaded server: %s", minLdCmsAnalServer));
+
+			setCmsWebServiceAddress(minLdCmsAnalServer);
+			cbwsl.setCastWebServicePortEndpointAddress(minLdCmsAnalServer);
+			CastWebService cbws = cbwsl.getCastWebServicePort();
+			// int add_appl = cbws.addAppl();
+			int add_appl = addApplJnk(listener, minLdCmsAnalServer);
+
+		} catch (ServiceException e) {
+			e.printStackTrace();
+			rslt = false;
+		}
+
+		return rslt;
+	}
+
+	private CastWebService getCbwsInstance() {
+		CastWebService cbws = null;
+		CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+		cbwsl.setCastWebServicePortEndpointAddress(getCmsWebServiceAddress());
+		try {
+			cbws = cbwsl.getCastWebServicePort();
+		} catch (ServiceException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return cbws;
+	}
+
+	/**
+	 * Log the cms analysis server name selected after checking load balance.
+	 */
+	private String logMinLoadedCmsAnalServerDtl(BuildListener listener) {
+		try {
+			int cnt = getApplCountJnk(listener, getCmsWebServiceAddress());
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return getCmsWebServiceAddress();
+	}
+
+	private void deleteApplCount(BuildListener listener, String cmsWebAddr) {
+		CastWebService cbws = getCbwsInstance();
+		try {
+			// cbws.deleteAppl();
+			int add_appl = deleteApplJnk(listener, cmsWebAddr);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
-	
-	/**
-	 * Set current scan type from AOP
-	 * @param appName
-	 * @param rescanType
-	 */
-	void setCurrentScanType(AbstractBuild build, BuildListener listener, String appName, String rescanType)
-	{
+
+	private boolean runSelectedTasks(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws InterruptedException, IOException {
+
+		boolean rslt = true;
+
+		// add code to choose CBWS for analysis
+		listener.getLogger().println("Checking for least loaded analysis server");
+
+		if (setMinLoadedCmsAnalServer(listener)) {
+
+			String cmsAddr;
+
+			cmsAddr = logMinLoadedCmsAnalServerDtl(listener);
+			try {
+
+				if (isBackup()) // backup schema triplets
+				{
+					rslt = performBackup(build, launcher, listener);
+				}
+
+				if (rslt == true && isDa()) { // deliver source code
+					rslt = performSourceDelivery(build, launcher, listener);
+				}
+
+				if (rslt == true && isAd()) { // accept delivery
+					rslt = performAcceptDelivery(build, launcher, listener);
+				}
+
+				if (rslt == true && isRa()) { // run analysis
+					rslt = performAnalysis(build, launcher, listener);
+				}
+
+				if (rslt == true && isRs()) { // run snapshot
+					rslt = performSnapshot(build, launcher, listener);
+				}
+
+				if (rslt == true && isRav()) { // run snapshot validation
+					rslt = performSnapshotValidation(build, launcher, listener);
+				}
+
+				if (rslt == true && isPublish()) { // publish snapshot to AAD
+					rslt = performPublishToAAD(build, launcher, listener);
+				}
+
+				if (rslt == true && isArchive()) { // archive Delivery
+					rslt = performArchiveDelivery(build, launcher, listener);
+				}
+
+				if (rslt == true && isOptimize()) { // optimize schema triplets
+					rslt = performDatabaseOptimize(build, launcher, listener);
+				}
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			finally {
+				performFinalStep(build, launcher, listener);
+				deleteApplCount(listener, cmsAddr); // Decrease the application
+													// count.
+
+			}
+		}
+
+		return rslt;
+	}
+
+	private boolean performBackup(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		long startTime = System.nanoTime();
+		boolean retCode = true;
+		int taskId;
+
+		EnvVars envVars = build.getEnvironment(listener);
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunBackup) {
+			listener.getLogger().println(" ");
+			listener.getLogger().println(String.format("${START_AT} = %d, skipping backup step.", startAt));
+		} else {
+			listener.getLogger().println(" ");
+			listener.getLogger().println("Backup CAST Application database tripplet");
+
+			String castDate = envVars.get(Constants.CAST_DATE);
+			String webServiceAddress = getCmsWebServiceAddress();
+			String castSchemaPrefix = getSchemaPrefix();
+			String appName = getAppName();
+			// String verName = getVersionName();
+			String verName = envVars.get(Constants.VERSION_NAME, "");
+
+			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+			cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+			try {
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+				listener.getLogger()
+						.println(String.format("Using Web service in performBackup - %s", webServiceAddress));
+
+				if (!Utils.validateWebServiceVersion(webServiceAddress, listener)) {
+					return false;
+				}
+
+				Calendar cal = Utils.convertCastDate(castDate);
+
+				taskId = cbws.runBackup(castSchemaPrefix, appName, verName, cal);
+				if (taskId < 0) {
+					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+					return false;
+				}
+
+				if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+					return false;
+				}
+
+			} catch (ServiceException | HelperException | ParseException e) {
+				retCode = false;
+				listener.getLogger()
+						.println(String.format("%s error accured while backing up the tripplet", e.getMessage()));
+			}
+
+		}
+		return retCode;
+	}
+
+	private boolean performSourceDelivery(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+
+		int taskId;
+		long startTime = System.nanoTime();
+
+		EnvVars envVars = build.getEnvironment(listener);
+
+		String cmsWebServiceAddress1 = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);
+		CastWebServiceServiceLocator cbwsl1 = new CastWebServiceServiceLocator();
+		cbwsl1.setCastWebServicePortEndpointAddress(cmsWebServiceAddress1);
+		CastWebService cbws11 = null;
+		try {
+			cbws11 = cbwsl1.getCastWebServicePort();
+		} catch (ServiceException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		String strQAScan = cbws11.getQAScanFlag();
+
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+
+		String rescanType;
+		try {
+			rescanType = envVars.get(Constants.RESCAN_TYPE);
+		} catch (Exception e) {
+			rescanType = "PROD";
+		}
+
+		listener.getLogger().println(" ");
+		if (startAt > Constants.RunDMT) {
+			listener.getLogger().println(String.format("${START_AT} = %d, skipping delivery step.", startAt));
+		} else {
+			listener.getLogger().println("Deliver Application");
+
+			String castDate = envVars.get(Constants.CAST_DATE);
+			String dmtWebServiceAddress = envVars.get(Constants.DMT_WEB_SERVICE_ADDRESS);
+			String cmsWebServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);
+			String appName = envVars.get(Constants.APPLICATION_NAME, "");
+			String schemaPrefix = envVars.get(Constants.SCHEMA_PREFIX, "");
+
+			cbws11.setSchemaNamesInAOP(appName, schemaPrefix);
+
+			String versionName = envVars.get(Constants.VERSION_NAME, "");
+
+			String workFlow = envVars.get(Constants.WORK_FLOW);
+
+			String referenceVersion = "";
+
+			if (strQAScan.toLowerCase().equals("true")) {
+				if (rescanType.equals("QA")) {
+					referenceVersion = envVars.get(Constants.REFERENCE_VERSION);
+				} else {
+					referenceVersion = envVars.get(Constants.REFERENCE_VERSION_PROD);
+				}
+			} else {
+				referenceVersion = envVars.get(Constants.REFERENCE_VERSION);
+			}
+
+			listener.getLogger().println(String.format("Sent Console URL to AOP"));
+
+			boolean isUseJnlp = Boolean.parseBoolean(envVars.get(Constants.RUN_JNLP_DELIVERY));
+
+			boolean failBuild = workFlow.trim().toLowerCase().equals("no");
+			listener.getLogger().println("DMT Web Service: " + dmtWebServiceAddress);
+			listener.getLogger().println("CMS Web Service: " + getCmsWebServiceAddress());
+
+			CastWebServiceServiceLocator cbwsld = new CastWebServiceServiceLocator();
+			cbwsld.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
+
+			CastWebServiceServiceLocator cbwsldd = new CastWebServiceServiceLocator();
+			cbwsldd.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
+
+			CastWebServiceServiceLocator cbwslc = new CastWebServiceServiceLocator();
+			cbwslc.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
+
+			try {
+				CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+				cbwsl.setCastWebServicePortEndpointAddress(dmtWebServiceAddress);
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+				cbws.setSchemaNamesInAOP(appName, schemaPrefix);
+				if (strQAScan.toLowerCase().equals("true")) {
+					listener.getLogger()
+							.println(String.format("Parsing Delivery folder to identify previous accepted version"));
+					String deliveryFolder = cbws.getDMTDeliveryFolder();
+					listener.getLogger().println(String.format("Delivery Folder: %s", deliveryFolder));
+					listener.getLogger().println(String.format("App Name: %s", appName));
+
+					listener.getLogger().println(String.format("Parsing start...."));
+					String strPreviousVersion = "";
+					strPreviousVersion = cbws.getPrevDmtVersion(deliveryFolder, appName, rescanType);
+
+					String validateionProbURL = cbws.getValidationProbURL();
+					ValidationProbesService vps = null;
+					listener.getLogger().println(String.format("AOP URL: %s", validateionProbURL));
+					if (strPreviousVersion.equals("")) {
+						if (rescanType.equals("QA")) {
+							listener.getLogger().println(String.format(
+									"Issue finding previous version. `QA` prefixed (QA) DMT Accepted Delivery version must exist"));
+						} else {
+							listener.getLogger().println(String.format(
+									"Issue finding previous version. NON `QA` prefixed (PROD) DMT Accepted Delivery version must exist"));
+						}
+
+						if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+							listener.getLogger().println(
+									"Warning: Connection to AOP is not configured - validation check has not been performed");
+						} else {
+							vps = new ValidationProbesService(validateionProbURL);
+
+							if (vps != null) {
+								cbws.UpdateRescanStatus(appName, versionName, castDate, "DMT - Error", "DMT");
+							}
+						}
+						return false;
+
+					} else {
+						listener.getLogger().println(
+								String.format("Previous Version retrieved successfully: %s", strPreviousVersion));
+					}
+					referenceVersion = strPreviousVersion;
+				} else {
+					listener.getLogger()
+							.println(String.format("Parsing Delivery folder to identify previous accepted version"));
+					String deliveryFolder = cbws.getDMTDeliveryFolder();
+					listener.getLogger().println(String.format("Delivery Folder: %s", deliveryFolder));
+					listener.getLogger().println(String.format("App Name: %s", appName));
+					listener.getLogger().println(String.format("Rescan Type: %s", rescanType));
+
+					listener.getLogger().println(String.format("Parsing start...."));
+					String strPreviousVersion = "";
+					strPreviousVersion = cbws.getPrevDmtVersion(deliveryFolder, appName, "PROD");
+					String validateionProbURL = cbws.getValidationProbURL();
+					ValidationProbesService vps = null;
+					listener.getLogger().println(String.format("AOP URL: %s", validateionProbURL));
+					if (strPreviousVersion.equals("")) {
+						listener.getLogger().println(String
+								.format("Issue finding previous version. DMT Accepted Delivery version must exist"));
+
+						if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+							listener.getLogger().println(
+									"Warning: Connection to AOP is not configured - validation check has not been performed");
+						} else {
+							vps = new ValidationProbesService(validateionProbURL);
+
+							if (vps != null) {
+								cbws.UpdateRescanStatus(appName, versionName, castDate, "DMT - Error", "DMT");
+							}
+						}
+						return false;
+
+					} else {
+						listener.getLogger().println(
+								String.format("Previous Version retrieved successfully: %s", strPreviousVersion));
+					}
+					referenceVersion = strPreviousVersion;
+				}
+
+				CastWebService cbwsd = cbwsld.getCastWebServicePort();
+				CastWebService cbwsc = cbwslc.getCastWebServicePort();
+
+				if (!Utils.validateWebServiceVersion(dmtWebServiceAddress, listener)
+						|| !Utils.validateWebServiceVersion(cmsWebServiceAddress, listener)) {
+					return false;
+				}
+
+				String appId = cbws.getApplicationUUID(appName);
+				if (appId == null) {
+					listener.getLogger().println("appId unavaliable");
+					return false;
+				}
+
+				listener.getLogger().println("\nDelivery Manager Tool - DMT");
+
+				Calendar cal = Utils.convertCastDate(castDate);
+				startTime = System.nanoTime();
+
+				// start delivery
+				if (isUseJnlp) // via aic portal
+				{
+
+					taskId = cbwsd.automateDeliveryJNLP(appId, appName, referenceVersion, versionName, cal);
+				} else { // via cms
+					taskId = cbwsd.deliveryManagerTool(appId, appName, referenceVersion, versionName, cal);
+				}
+
+				if (taskId < 0) { // did the job start properly
+					listener.getLogger().println(String.format("Error: %s", cbwsd.getErrorMessage(-taskId)));
+					return false || failBuild;
+				}
+
+				// display logs and wait for completion code
+				if (!Utils.getLog(cbwsd, taskId, startTime, listener)) {
+					cbwsd.DMTLogs(appId, appName, referenceVersion, versionName, cal);
+					return false;
+				}
+
+				// run delivery report
+				listener.getLogger().println(" ");
+				listener.getLogger().println("Delivery Report");
+				int retCode = 0;
+				taskId = cbwsc.deliveryReport(appId, appName, referenceVersion, versionName, cal);
+				switch (taskId) {
+				case -1:
+					listener.getLogger().println("An exception has occured during the delivery report execution");
+					listener.getLogger().println("See the CAST Batch Web Service mainlog for more information");
+					listener.getLogger().println(String.format("Error: %s", cbwsc.getErrorMessage(-taskId)));
+					break;
+				case -2:
+					listener.getLogger().println("Can't find java executor, please update CastAIPWS.properties file");
+					break;
+				case -3:
+					listener.getLogger().println(
+							"Can't find CASTDeliveryReporter.jar file, please update CastAIPWS.properties file");
+					break;
+				case -4:
+					listener.getLogger()
+							.println("Delivery folder has not been set, please update CastAIPWS.properties file");
+					break;
+				default:
+					if (!Utils.getLog(cbwsc, taskId, startTime, listener)) {
+						retCode = cbwsc.getTaskExitValue(taskId);
+
+						if (retCode == -2) {
+							build.addAction(new PublishEnvVarAction("BUILD_STATUS",
+									"Warning:  No Changes have been made for this delivery, analysis aborted"));
+						}
+
+						return false;
+					}
+					break;
+				}
+				listener.getLogger().println(" ");
+
+			} catch (ServiceException | RemoteException | ParseException | HelperException e) {
+				listener.getLogger().println(String.format(
+						"%s error accured while generating the packaging and delivering the code!", e.getMessage()));
+				return false || failBuild;
+			} catch (UnsupportedOperationException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (SOAPException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			catch (Exception e) {
+				listener.getLogger()
+						.println(String.format("Interrupted after: %s\n%s: %s",
+								CastUtil.formatNanoTime(System.nanoTime() - startTime), e.getClass().getName(),
+								e.getMessage()));
+				return false || failBuild;
+			}
+
+			// are there any remaining steps to run, if so run them now
+
+			if (!Utils.runJobs(build, launcher, listener, this.getClass(), Constants.RunDMT)) {
+				return false;
+			}
+
+		}
+		return true;
+	}
+
+	private boolean performAcceptDelivery(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		int taskId;
+		long startTime = System.nanoTime();
+
+		EnvVars envVars = build.getEnvironment(listener);
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunAcceptDelivery) {
+			listener.getLogger().println(" ");
+			listener.getLogger()
+					.println(String.format("${START_AT} = %d, skipping delivery acceptance step.", startAt));
+		} else {
+			listener.getLogger().println("");
+			listener.getLogger().println("Accept Delivery");
+
+			String castDate = envVars.get(Constants.CAST_DATE);
+			String webServiceAddress = getDmtWebServiceAddress();
+			String appName = getAppName();
+			String versionName = envVars.get(Constants.VERSION_NAME, "");
+			String castMSConnectionProfile = getCastMSConnectionProfile();
+			String workFlow = getWorkFlow();
+
+			boolean failBuild = workFlow.trim().toLowerCase().equals("no");
+			listener.getLogger().println("Web Service: " + webServiceAddress);
+
+			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+			cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+			try {
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+
+				Date dateForToday = Constants.castDateFormat.parse(castDate);
+				String versionNameWithTag = versionName.replace("[TODAY]",
+						Constants.dateFormatVersion.format(dateForToday));
+
+				listener.getLogger().println(String.format("Application Name: %s", appName));
+				listener.getLogger().println(String.format("Version Name: %s", versionName));
+				listener.getLogger().println(String.format("Connection Profile Name: %s", castMSConnectionProfile));
+
+				VersionInfo vi = RemoteHelper.getVersionInfo(webServiceAddress);
+				if (!checkWebServiceCompatibility(vi.getVersion())) {
+					listener.getLogger().println(String.format("Incompatible Web Service Version %s (Supported: %s)",
+							vi.getVersion(), Constants.wsVersionCompatibility));
+					return false || failBuild;
+				}
+
+				// Accept Deliver
+				startTime = System.nanoTime();
+				Calendar cal = Utils.convertCastDate(castDate);
+
+				int retryCount = 0;
+				taskId = 0;
+				while (true) {
+					try {
+						taskId = cbws.acceptDelivery(appName, versionNameWithTag, castMSConnectionProfile, cal);
+						listener.getLogger().println("Accepting delivered code ...");
+						break;
+					} catch (AxisFault af) {
+						retryCount++;
+						if (retryCount < 3) {
+							listener.getLogger().printf("%d Access fault encountered\n", retryCount);
+						} else {
+							listener.getLogger().println("Aborging, too many access faults encounerd.");
+							return false;
+						}
+					}
+				}
+				if (taskId < 0) {
+					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+					return false || failBuild;
+				} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+					return false;
+				}
+
+				// Set As Current Version
+				listener.getLogger().println("");
+				listener.getLogger().println("Set As Current Version");
+				startTime = System.nanoTime();
+				taskId = cbws.setAsCurrentVersion(appName, versionNameWithTag, castMSConnectionProfile, cal);
+
+				if (taskId < 0) {
+					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+					return false || failBuild;
+				}
+
+				if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+					return false;
+				}
+
+				listener.getLogger().println(" ");
+
+			} catch (ServiceException | RemoteException | ParseException | HelperException e) {
+				listener.getLogger()
+						.println(String.format("Interrupted after: %s\n%s: %s",
+								CastUtil.formatNanoTime(System.nanoTime() - startTime), e.getClass().getName(),
+								e.getMessage()));
+				return false || failBuild;
+			}
+		}
+		return true;
+
+	}
+
+	private boolean performAnalysis(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		String cmsAddr = logMinLoadedCmsAnalServerDtl(listener);
+		int taskId;
+		long startTime = System.nanoTime();
+
+		EnvVars envVars = build.getEnvironment(listener);
+
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunAnalysis) {
+			listener.getLogger().println(" ");
+			listener.getLogger().println(String.format("${START_AT} = %d, skipping run analysis step.", startAt));
+		} else {
+			listener.getLogger().println("");
+			listener.getLogger().println("Run Analysis");
+
+			boolean failBuild = false;
+			try {
+				String webServiceAddress = getCmsWebServiceAddress();
+				String castDate = envVars.get(Constants.CAST_DATE);
+				String appName = getAppName();
+				String schemaPrefix = getSchemaPrefix();
+
+				// setSchemaNamesInAOP(build, listener, appName);
+
+				String dbPrefix = getSchemaPrefix();
+				// String versionName = getVersionName();
+				String versionName = envVars.get(Constants.VERSION_NAME, "");
+				String castMSConnectionProfile = getCastMSConnectionProfile();
+				String workFlow = getWorkFlow();
+				failBuild = workFlow.trim().toLowerCase().equals("no");
+
+				CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+				cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+				cbws.setSchemaNamesInAOP(appName, schemaPrefix);
+				Calendar cal = Utils.convertCastDate(castDate);
+
+				startTime = System.nanoTime();
+				taskId = cbws.runAnalysis(appName, versionName, castMSConnectionProfile, cal);
+
+				if (taskId < 0) {
+					listener.getLogger().println(" ");
+					listener.getLogger().println("Trying Analysis response less than 0");
+					String validateionProbURL = cbws.getValidationProbURL();
+					if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+
+						listener.getLogger().println(" ");
+						listener.getLogger().println(" ");
+
+					} else {
+						listener.getLogger().println(" ");
+						listener.getLogger().println("Sending analyisis logs to Application Operations Portal");
+
+						String mngtDB = String.format("%s_mngt", dbPrefix);
+						String rslt = cbws.sendAnalysisLogs(mngtDB, appName, castDate);
+						listener.getLogger().println("Response recieved from CBWS");
+						JsonResponse response = new Gson().fromJson(rslt, JsonResponse.class);
+						listener.getLogger().println("Response recieved from CBWS processed");
+						if (response.getCode() < 0) {
+							listener.getLogger()
+									.println("Error sending analyisis logs to Application Operations Portal");
+						}
+						listener.getLogger().println(response.getJsonString());
+					}
+
+					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+					return false || failBuild;
+				} else {
+
+					listener.getLogger().println(" ");
+					listener.getLogger().println("Trying Analysis response not less than 0");
+
+					boolean runStatus = Utils.getLog(cbws, taskId, startTime, listener);
+
+					String validateionProbURL = cbws.getValidationProbURL();
+					if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+
+						listener.getLogger().println(" ");
+						listener.getLogger().println(" ");
+
+					} else {
+						listener.getLogger().println(" ");
+						listener.getLogger().println("Sending analyisis logs to Application Operations Portal");
+
+						String mngtDB = String.format("%s_mngt", dbPrefix);
+						String rslt = cbws.sendAnalysisLogs(mngtDB, appName, castDate);
+						listener.getLogger().println("Response recieved from CBWS");
+						JsonResponse response = new Gson().fromJson(rslt, JsonResponse.class);
+						listener.getLogger().println("Response recieved from CBWS processed");
+						if (response.getCode() < 0) {
+							listener.getLogger()
+									.println("Error sending analyisis logs to Application Operations Portal");
+						}
+						listener.getLogger().println(response.getJsonString());
+					}
+					return runStatus;
+				}
+
+			} catch (IOException | ServiceException | ParseException e) {
+				listener.getLogger()
+						.println(String.format("Interrupted after: %s\n%s: %s",
+								CastUtil.formatNanoTime(System.nanoTime() - startTime), e.getClass().getName(),
+								e.getMessage()));
+				return false || failBuild;
+			}
+		}
+
+		listener.getLogger().println(" ");
+		listener.getLogger().println("Running in case any jobs remains");
+
+		return true;
+	}
+
+	private boolean performSnapshot(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		String cmsAddr = logMinLoadedCmsAnalServerDtl(listener);
+		List<Snapshot> snapshotListToDeleteQA = null;
+		int taskId;
+		long startTime = System.nanoTime();
+
+		EnvVars envVars = build.getEnvironment(listener);
+
+		String cmsWebServiceAddress1 = getCmsWebServiceAddress();
+		CastWebServiceServiceLocator cbwsl11 = new CastWebServiceServiceLocator();
+		cbwsl11.setCastWebServicePortEndpointAddress(cmsWebServiceAddress1);
+		CastWebService cbws11 = null;
+		try {
+			cbws11 = cbwsl11.getCastWebServicePort();
+		} catch (ServiceException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		String strQAScan = cbws11.getQAScanFlag();
+
+		String rescanType;
+		try {
+			rescanType = envVars.get(Constants.RESCAN_TYPE);
+		} catch (Exception e) {
+			rescanType = "PROD";
+		}
+
 		String webServiceAddress = getCmsWebServiceAddress();
-		
+		// String versionName = getVersionName();
+		String versionName = envVars.get(Constants.VERSION_NAME, "");
+		String castSchemaPrefix = getSchemaPrefix();
+		String castMSConnectionProfile = getCastMSConnectionProfile();
+		String retentionPolicy = getRetentionPolicy();
+		String workFlow = getWorkFlow();
+		boolean failBuild = false;
+		failBuild = workFlow.trim().toLowerCase().equals("no");
+
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunSnapshot) {
+			listener.getLogger().println(" ");
+			listener.getLogger().println(String.format("${START_AT} = %d, skipping run snapshot step.", startAt));
+		} else {
+			listener.getLogger().println("");
+			listener.getLogger().println("Run Snapshot");
+
+			try {
+				String castDate = envVars.get(Constants.CAST_DATE);
+				String appName = getAppName();
+
+				String snapshotName = envVars.get(Constants.VERSION_NAME, "");
+
+				CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+				cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+
+				strQAScan = cbws.getQAScanFlag();
+
+				String centralDbName = String.format("%s_central", castSchemaPrefix);
+				String snapshots = cbws.getSnapshotList(centralDbName, appName);
+				Gson gson = new Gson();
+				Type collectionType = new TypeToken<List<Snapshot>>() {
+				}.getType();
+				List<Snapshot> snapshotList = gson.fromJson(snapshots, collectionType);
+				snapshotListToDeleteQA = snapshotList;
+
+				if (!Utils.validateWebServiceVersion(webServiceAddress, listener)) {
+					return false;
+				}
+
+				Calendar cal = Utils.convertCastDate(castDate);
+
+				int retentionPolicyInterval = 0;
+				if (!retentionPolicy.isEmpty() || startAt > 0) {
+					String policyName = "";
+					if (retentionPolicy.equals("12"))
+						policyName = "Monthy";
+					else if (retentionPolicy.equals("4"))
+						policyName = "Quarterly";
+					else if (retentionPolicy.equals("2"))
+						policyName = "Every 6 Months";
+
+					if (policyName.isEmpty())
+						listener.getLogger().println("Snapshot retention policy has NOT been set for this application");
+					else
+						listener.getLogger()
+								.println(String.format("Snapshot retention policy is set to %s", policyName));
+
+					// we always want to keep the first snapshot so,
+					// make sure there are at least two snapshots to work with
+					if (snapshotList != null && snapshotList.size() > 1) {
+						// get the latest snapshot
+						Snapshot latestSnapshot = snapshotList.get(snapshotList.size() - 1);
+						Date lsd = Snapshot.DATE_CONVERTION.parse(latestSnapshot.getFunctionalDate());
+						Calendar testDate = Calendar.getInstance();
+						testDate.setTime(lsd);
+
+						int lsdMonth = testDate.get(Calendar.MONTH);
+						int cdMonth = cal.get(Calendar.MONTH);
+
+						// is there a snapshot for the last snapshot date or
+						// is the snapshot retention policy set?
+						if (lsd.compareTo(Constants.castDateFormat.parse(castDate)) == 0
+								|| (!policyName.isEmpty() && lsdMonth == cdMonth)) {
+							startTime = System.nanoTime();
+							if (policyName.isEmpty())
+								listener.getLogger().println("Deleting snapshot to allow for replacement");
+							else
+								listener.getLogger().println("Deleting snapshot to maintain the retention policy");
+
+							taskId = cbws.deleteSnapshot(appName, castMSConnectionProfile, testDate, centralDbName);
+
+							if (taskId < 0) {
+								listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+								return false || failBuild;
+							} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+								listener.getLogger().println(" ");
+								listener.getLogger().println("Warning:  Delete Snapshot failed");
+								listener.getLogger().println(" ");
+							}
+						}
+					} else if (snapshotList != null && snapshotList.size() == 1 && startAt > 0) {
+						Snapshot latestSnapshot = snapshotList.get(snapshotList.size() - 1);
+						Date lsd = Snapshot.DATE_CONVERTION.parse(latestSnapshot.getFunctionalDate());
+
+						if (lsd.compareTo(Constants.castDateFormat.parse(castDate)) == 0) {
+							Calendar testDate = Calendar.getInstance();
+							testDate.setTime(lsd);
+							startTime = System.nanoTime();
+							listener.getLogger().println("Deleting snapshot to allow for the creation of a new one");
+							taskId = cbws.deleteSnapshot(appName, castMSConnectionProfile, testDate, centralDbName);
+							if (taskId < 0) {
+								listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+								return false || failBuild;
+							} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+								listener.getLogger().println(" ");
+								listener.getLogger().println("Warning:  Delete Snapshot failed");
+								listener.getLogger().println(" ");
+							}
+						}
+					} else {
+						if (snapshotList == null) {
+							listener.getLogger().println(
+									"Warning:  This is the fist snapshot fo this application or an error might have occured while retriving the snapshot list");
+						} else {
+							listener.getLogger().println("There is only one  snapshot, nothing to delete");
+						}
+					}
+				}
+
+				startTime = System.nanoTime();
+				taskId = cbws.runSnapshot(appName, castMSConnectionProfile, snapshotName, versionName, cal,
+						Boolean.toString(false), rescanType);
+
+				if (taskId < 0) {
+					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+					return false || failBuild;
+				} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+					return false || failBuild;
+				}
+
+			} catch (IOException | ServiceException | ParseException | HelperException e) {
+				listener.getLogger()
+						.println(String.format("%s error accured while generating the snapshot!", e.getMessage()));
+				return false || failBuild;
+			}
+		}
+
+		if (strQAScan.toLowerCase().equals("true")) {
+			// if scan type is PROD, then delete all QA snapshots-here
+			if (!rescanType.equals("QA")) {
+				if (snapshotListToDeleteQA != null && snapshotListToDeleteQA.size() > 1) {
+					for (Snapshot snap : snapshotListToDeleteQA) {
+						String strSnapshotName = snap.getSnapshotName();
+
+						Date lsd1 = null;
+						try {
+							lsd1 = Snapshot.DATE_CONVERTION.parse(snap.getFunctionalDate());
+						} catch (ParseException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						Calendar dateSnapshotDate = Calendar.getInstance();
+						dateSnapshotDate.setTime(lsd1);
+						if (strSnapshotName.startsWith("QA")) {
+							// delete this snapshot
+
+							// String webServiceAddress =
+							// envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);
+							// String appName =
+							// envVars.get(Constants.APPLICATION_NAME);
+							// String castMSConnectionProfile =
+							// envVars.get(Constants.CONNECTION_PROFILE);
+							// String castSchemaPrefix =
+							// envVars.get(Constants.SCHEMA_PREFIX);
+							String centralDbName = String.format("%s_central", castSchemaPrefix);
+							// boolean failBuild = false;
+
+							CastWebServiceServiceLocator cbwsl1 = new CastWebServiceServiceLocator();
+							cbwsl1.setCastWebServicePortEndpointAddress(webServiceAddress);
+							CastWebService cbws = null;
+							try {
+								cbws = cbwsl1.getCastWebServicePort();
+							} catch (ServiceException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+
+							taskId = cbws.deleteSnapshot(appName, castMSConnectionProfile, dateSnapshotDate,
+									centralDbName);
+							if (taskId < 0) {
+								listener.getLogger().println(
+										String.format("Error deleting QA snapshot: %s", cbws.getErrorMessage(-taskId)));
+								return false || failBuild;
+							} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+								listener.getLogger().println(" ");
+								listener.getLogger().println("Warning:  Delete Snapshot failed");
+								listener.getLogger().println(" ");
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+	private boolean performSnapshotValidation(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		String cmsAddr = logMinLoadedCmsAnalServerDtl(listener);
+		long startTime = System.nanoTime();
+		ValidationProbesService vps = null;
+
+		EnvVars envVars = build.getEnvironment(listener);
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunValidation) {
+			listener.getLogger().println(" ");
+			listener.getLogger()
+					.println(String.format("${START_AT} = %d, skipping run snapshot validation step.", startAt));
+			return true;
+		} else {
+			listener.getLogger().println("");
+			listener.getLogger().println("Validate Snapshot");
+
+			String castDate = envVars.get(Constants.CAST_DATE);
+			String webServiceAddress = getCmsWebServiceAddress();
+			String appName = getAppName();
+			// String versionName = getVersionName();
+			String versionName = envVars.get(Constants.VERSION_NAME, "");
+			String snapshotName = versionName;
+
+			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+			cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+			boolean pass = true;
+			try {
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+				String validationStopFlag = cbws.getValidationStopFlag();
+				if (!Utils.validateWebServiceVersion(webServiceAddress, listener)) {
+					return false;
+				}
+
+				// Validate Snapshot Results
+				listener.getLogger()
+						.println(String.format("Running Snapshot Validation for %s - %s", appName, snapshotName));
+				String validateionProbURL = cbws.getValidationProbURL();
+				if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+					listener.getLogger().println(
+							"Warning: Connection to AOP is not configured - validation check has not been performed");
+				} else {
+					vps = new ValidationProbesService(validateionProbURL);
+
+					//StringBuffer output = new StringBuffer();
+					String output1 = new String();
+					output1 = cbws.runAllChecks(appName, snapshotName);
+					StringBuffer output = new StringBuffer(output1); 
+					//output = output1.tos
+					if(validationStopFlag != null && validationStopFlag.toLowerCase().equals("true"))
+					{
+					    listener.getLogger().println("Warning: validation.stop flag is set to stop at validation stage");
+					    listener.getLogger().println("Please check AOP Rescan Validation Page for details");
+						listener.getLogger().println(String.format("AOP URL: %s", validateionProbURL));
+					   
+					    if(output1 == "false")
+					    {
+					    	pass = false;
+					    }
+					    else
+					    {
+					    	pass = true;
+					    }
+					} 
+					else
+					{
+						listener.getLogger().println("Warning: validation.stop flag is set to false, hence this application will pass this stage.");
+						listener.getLogger().println("Please check AOP Rescan Validation screen for details");
+						listener.getLogger().println(String.format("AOP URL: %s", validateionProbURL.replace("ValidationProbesService.asmx", "Validation.aspx")));
+						pass = true;
+					}
+					listener.getLogger().println("Sending Validation Status Message...");
+					listener.getLogger().println(String.format("Sending completion message: \"%s\" \"%s\" \"%s\" \"%s\" \"%s\"", appName, versionName, castDate,
+							5, pass));
+					cbws.UpdateRescanStatus(appName, versionName, castDate, "Validation - "
+							+ (pass ? "OK" : "Error"), "Validation");
+					/*
+					for (ValidationResults result : allChecks) {
+						output.setLength(0);
+						output.append(result.getCheckNumber()).append("-").append(result.getTestDescription())
+								.append(":").append(result.getAdvice());
+						listener.getLogger().println(output);
+
+						if (validationStopFlag.toLowerCase().equals("true")) {
+							if (result.getAdvice().equals("NO GO")) {
+								pass = false;
+							}
+						} else {
+							pass = true;
+						}
+
+					} */
+				}
+			} catch (ServiceException | RemoteException | UnsupportedOperationException | SOAPException
+					| HelperException e) {
+				listener.getLogger()
+						.println(String.format("%s error accured while validation", e.getMessage()));
+				return false;
+			} finally {
+				listener.getLogger().println(String.format("This application has %s", (pass ? "passed" : "failed")));
+				if (vps != null) {
+					CastWebServiceServiceLocator cbwsl1 = new CastWebServiceServiceLocator();
+					cbwsl1.setCastWebServicePortEndpointAddress(webServiceAddress);
+					CastWebService cbws;
+					
+					try {
+						cbws = cbwsl1.getCastWebServicePort();
+						cbws.UpdateRescanStatus(appName, versionName, castDate, "Validation - "
+								+ (pass ? "OK" : "Error"), "Validation");
+					} catch (ServiceException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				listener.getLogger().println(" ");
+			}
+		}
+		return true;
+	}
+
+	private boolean performPublishToAAD(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		String cmsAddr = logMinLoadedCmsAnalServerDtl(listener);
+		int taskId = 0;
+		long startTime = System.nanoTime();
+
+		EnvVars envVars = build.getEnvironment(listener);
+
+		String rescanType;
+		try {
+			rescanType = envVars.get(Constants.RESCAN_TYPE);
+		} catch (Exception e) {
+			rescanType = "PROD";
+		}
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunPublishAAD) {
+			listener.getLogger().println(" ");
+			listener.getLogger().println(String.format("${START_AT} = %d, skipping publish snapshot step.", startAt));
+		} else {
+			listener.getLogger().println(" ");
+			listener.getLogger().println("Publish Snapshot");
+
+			boolean failBuild = false;
+			try {
+				String castDate = envVars.get(Constants.CAST_DATE);
+				String webServiceAddress = getCmsWebServiceAddress();
+				String appName = getAppName();
+				String versionName = getVersionName();
+				String castSchemaPrefix = getSchemaPrefix();
+				String aadSchemaName = getAadSchemaName();
+				String workFlow = getWorkFlow();
+				failBuild = workFlow.trim().toLowerCase().equals("no");
+
+				CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+				cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+				if (!Utils.validateWebServiceVersion(webServiceAddress, listener)) {
+					return false;
+				}
+
+				String strQAScan = cbws.getQAScanFlag();
+
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(Constants.castDateFormat.parse(castDate));
+
+				startTime = System.nanoTime();
+
+				if (strQAScan.toLowerCase().equals("true")) {
+					if (rescanType.equals("QA")) {
+						listener.getLogger().println(" ");
+						listener.getLogger().println(
+								"NO GO: Publication not allowed for QA scans. Publication action NOT PERFORMED.");
+
+						String validateionProbURL = cbws.getValidationProbURL();
+						ValidationProbesService vps = null;
+						if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+							listener.getLogger().println(
+									"Warning: Connection to AOP is not configured - validation check has not been performed");
+						} else {
+							vps = new ValidationProbesService(validateionProbURL);
+
+							if (vps != null) {
+								cbws.UpdateRescanStatus(appName, versionName, castDate, "Publish Snapshot - OK",
+										"Report");
+							}
+						}
+
+						return true;
+					} else {
+						taskId = cbws.runPublishSnapshot(aadSchemaName, castSchemaPrefix + "_central", appName,
+								versionName, cal);
+						if (taskId < 0) {
+							listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+							return false || failBuild;
+						} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+							return false;
+						}
+					}
+				} else {
+					taskId = cbws.runPublishSnapshot(aadSchemaName, castSchemaPrefix + "_central", appName, versionName,
+							cal);
+					if (taskId < 0) {
+						listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+						return false || failBuild;
+					} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+						return false;
+					}
+				}
+
+			} catch (IOException | ServiceException | ParseException | UnsupportedOperationException
+					| HelperException e) {
+				listener.getLogger().println(String
+						.format("%s error accured while generating the publishing the snapshot!", e.getMessage()));
+				return false || failBuild;
+			} catch (SOAPException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return true;
+	}
+
+	private boolean performArchiveDelivery(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		String cmsAddr = logMinLoadedCmsAnalServerDtl(listener);
+		int taskId;
+		long startTime = System.nanoTime();
+
+		EnvVars envVars = build.getEnvironment(listener);
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunAnalysis) {
+			listener.getLogger().println(" ");
+			listener.getLogger().println(String.format("${START_AT} = %d, skipping run analysis step.", startAt));
+		} else {
+			listener.getLogger().println("");
+			listener.getLogger().println("Archive Delivery");
+
+			boolean failBuild = false;
+			try {
+				String webServiceAddress = getCmsWebServiceAddress();
+				String castDate = envVars.get(Constants.CAST_DATE);
+				String appName = getAppName();
+				// String versionName = getVersionName();
+				String versionName = envVars.get(Constants.VERSION_NAME, "");
+				String castMSConnectionProfile = getCastMSConnectionProfile();
+				String workFlow = getWorkFlow();
+				failBuild = workFlow.trim().toLowerCase().equals("no");
+
+				CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+				cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+
+				Calendar cal = Utils.convertCastDate(castDate);
+
+				startTime = System.nanoTime();
+				String appId = cbws.getApplicationUUID(appName);
+				versionName = envVars.get(Constants.VERSION_NAME, "");
+				taskId = cbws.archiveDelivery(appId, versionName);
+				if (taskId < 0) {
+					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+					return false || failBuild;
+				} else if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+					return false;
+				}
+
+			} catch (ServiceException | ParseException e) {
+				listener.getLogger()
+						.println(String.format("Interrupted after: %s\n%s: %s",
+								CastUtil.formatNanoTime(System.nanoTime() - startTime), e.getClass().getName(),
+								e.getMessage()));
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean performDatabaseOptimize(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+		String cmsAddr = logMinLoadedCmsAnalServerDtl(listener);
+		long startTime = System.nanoTime();
+		boolean retCode = true;
+		int taskId;
+		EnvVars envVars = build.getEnvironment(listener);
+
+		int startAt;
+		try {
+			startAt = Integer.parseInt(envVars.get(Constants.START_AT));
+		} catch (NumberFormatException e) {
+			startAt = 0;
+		}
+		if (startAt > Constants.RunDatabaseOptimize) {
+			listener.getLogger().println(" ");
+			listener.getLogger().println(String.format("${START_AT} = %d, skipping run snapshot step.", startAt));
+		} else {
+			listener.getLogger().println(" ");
+			listener.getLogger().println("CAST Database Optimization");
+
+			String castDate = envVars.get(Constants.CAST_DATE);
+			String webServiceAddress = getCmsWebServiceAddress();
+			String castSchemaPrefix = getSchemaPrefix();
+			String appName = getAppName();
+			String versionName = envVars.get(Constants.VERSION_NAME, "");
+
+			CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+			cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+			try {
+				CastWebService cbws = cbwsl.getCastWebServicePort();
+
+				if (!Utils.validateWebServiceVersion(webServiceAddress, listener)) {
+					return false;
+				}
+
+				Calendar cal = Utils.convertCastDate(castDate);
+
+				taskId = cbws.runOptimization(castSchemaPrefix, appName, versionName, cal);
+				if (taskId < 0) {
+					listener.getLogger().println(String.format("Error: %s", cbws.getErrorMessage(-taskId)));
+					return false;
+				}
+
+				if (!Utils.getLog(cbws, taskId, startTime, listener)) {
+					return false;
+				}
+
+			} catch (ServiceException | HelperException | ParseException e) {
+				listener.getLogger()
+						.println(String.format("%s error accured while backing up the tripplet", e.getMessage()));
+			}
+
+		}
+		return true;
+	}
+
+	private boolean performFinalStep(AbstractBuild build, Launcher launcher, BuildListener listener)
+			throws IOException, InterruptedException {
+
+		EnvVars envVars = build.getEnvironment(listener);
+
+		String castDate = envVars.get(Constants.CAST_DATE);
+		String webServiceAddress = envVars.get(Constants.CMS_WEB_SERVICE_ADDRESS);
+		String appName = envVars.get(Constants.APPLICATION_NAME);
+		String versionName = envVars.get(Constants.VERSION_NAME, "");
+
 		CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
 		cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
-		
+
+		CastWebService cbws;
+		try {
+			cbws = cbwsl.getCastWebServicePort();
+			listener.getLogger().println("Sending process complete message to rescan console");
+			String validateionProbURL = cbws.getValidationProbURL();
+			if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+				listener.getLogger().println("Warning: Connection to AOP is not configured");
+			} else {
+				ValidationProbesService vps = new ValidationProbesService(validateionProbURL);
+				cbws.UpdateRescanStatus(appName, versionName, castDate, "Rescan Success", "Rescan Success");
+			}
+		} catch (ServiceException | UnsupportedOperationException | SOAPException e) {
+			listener.getLogger()
+					.println(String.format("%s error accured while finalizing analysis job.", e.getMessage()));
+		}
+
+		return true;
+	}
+
+	/**
+	 * Set current scan type from AOP
+	 * 
+	 * @param appName
+	 */
+	void setSchemaNamesInAOP(AbstractBuild build, BuildListener listener, String appName) {
+		String webServiceAddress = getCmsWebServiceAddress();
+		String schemaPrefix = getSchemaPrefix();
+		CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+		cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+
 		try {
 			CastWebService cbws = cbwsl.getCastWebServicePort();
-			
+
 			String validateionProbURL = cbws.getValidationProbURL();
-			if (validateionProbURL==null || validateionProbURL.isEmpty()) {
-				listener.getLogger().println("Warning: Connection to AOP is not configured - validation check has not been performed");
-			} else {	
+			if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+				listener.getLogger().println("Warning: Connection to AOP is not configured - schema names not updated");
+			} else {
 				ValidationProbesService vps = new ValidationProbesService(validateionProbURL);
-				
-				EnvVars envVars = build.getEnvironment(listener); 
-				vps.updateCurrentRescanTypeAOP(appName,rescanType);
-				
-				
+
+				EnvVars envVars = build.getEnvironment(listener);
+				cbws.setSchemaNamesInAOP(appName, schemaPrefix);
+
 			}
-		} catch (ServiceException | UnsupportedOperationException | SOAPException | IOException | InterruptedException e) {
-			listener.getLogger().println("Error reading Rescan Type from Jenkins");
+		} catch (ServiceException | UnsupportedOperationException | SOAPException | IOException
+				| InterruptedException e) {
+			listener.getLogger().println("Error reading schema prefix from Jenkins");
 		}
 	}
 
 	/**
-	 *  Send Jenkins console location to AOP
+	 * Set current scan type from AOP
 	 * 
-	 * @param build 
+	 * @param appName
+	 * @param rescanType
+	 */
+	/*
+	void setCurrentScanType(AbstractBuild build, BuildListener listener, String appName, String rescanType) {
+		String webServiceAddress = getCmsWebServiceAddress();
+
+		CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
+		cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
+
+		try {
+			CastWebService cbws = cbwsl.getCastWebServicePort();
+
+			String validateionProbURL = cbws.getValidationProbURL();
+			if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+				listener.getLogger().println(
+						"Warning: Connection to AOP is not configured - validation check has not been performed");
+			} else {
+				ValidationProbesService vps = new ValidationProbesService(validateionProbURL);
+
+				EnvVars envVars = build.getEnvironment(listener);
+				vps.updateCurrentRescanTypeAOP(appName, rescanType);
+
+			}
+		} catch (ServiceException | UnsupportedOperationException | SOAPException | IOException
+				| InterruptedException e) {
+			listener.getLogger().println("Error reading Rescan Type from Jenkins");
+		}
+	}
+	*/
+
+	/**
+	 * Send Jenkins console location to AOP
+	 * 
+	 * @param build
 	 * @param listener
 	 * @param appName
 	 * @param castDate
 	 */
-	void sendJenkinsConsolURL(AbstractBuild build, BuildListener listener, String appName,String castDate)
-	{
+	/*
+	void sendJenkinsConsolURL(AbstractBuild build, BuildListener listener, String appName, String castDate) {
 		String webServiceAddress = getCmsWebServiceAddress();
-		
+
 		CastWebServiceServiceLocator cbwsl = new CastWebServiceServiceLocator();
 		cbwsl.setCastWebServicePortEndpointAddress(webServiceAddress);
-		
+
 		try {
 			CastWebService cbws = cbwsl.getCastWebServicePort();
-			
+
 			String validateionProbURL = cbws.getValidationProbURL();
-			if (validateionProbURL==null || validateionProbURL.isEmpty()) {
-				listener.getLogger().println("Warning: Connection to AOP is not configured - validation check has not been performed");
-			} else {	
-				ValidationProbesService vps = new ValidationProbesService(validateionProbURL);
-				
-				EnvVars envVars = build.getEnvironment(listener);
-				String jobName = envVars.get("JOB_NAME");
-				String buildNo = envVars.get("BUILD_NUMBER");
-				String consoleURL = String.format("job/%s/%s/console",jobName,buildNo);
-				vps.sendJenkinsConsolInfo(appName, castDate, consoleURL);
-				
+
+			if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+				listener.getLogger().println(
+						"Warning: Connection to AOP is not configured - validation check has not been performed");
+			} else {
+
+				if (validateionProbURL == null || validateionProbURL.isEmpty()) {
+					listener.getLogger().println(
+							"Warning: Connection to AOP is not configured - Jenkins console information not sent.");
+				} else {
+
+					ValidationProbesService vps = new ValidationProbesService(validateionProbURL);
+
+					EnvVars envVars = build.getEnvironment(listener);
+					String jobName = envVars.get("JOB_NAME");
+					String buildNo = envVars.get("BUILD_NUMBER");
+					String consoleURL = String.format("job/%s/%s/console", jobName, buildNo);
+					vps.sendJenkinsConsolInfo(appName, castDate, consoleURL);
+
+				}
 			}
-		} catch (ServiceException | UnsupportedOperationException | SOAPException | IOException | InterruptedException e) {
+		} catch (ServiceException | UnsupportedOperationException | SOAPException | IOException
+				| InterruptedException e) {
 			listener.getLogger().println("Error sending Jenkins console information to AOP");
 		}
 	}
-	
-
-
+	*/
 
 	// Overridden for better type safety.
 	// If your plugin doesn't really define any property on Descriptor,
 	// you don't have to do this.
 	@Override
-	public DescriptorImpl getDescriptor()
-	{
+	public DescriptorImpl getDescriptor() {
 		return (DescriptorImpl) super.getDescriptor();
 	}
 
@@ -698,16 +2061,13 @@ public class CastAIPBuilder extends Builder
 	@Extension
 	// This indicates to Jenkins that this is an implementation of an extension
 	// point.
-	public static final class DescriptorImpl extends BuildStepDescriptor<Builder>
-	{
-		public DescriptorImpl()
-		{
+	public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+		public DescriptorImpl() {
 			load();
 		}
 
 		@SuppressWarnings("rawtypes")
-		public boolean isApplicable(Class<? extends AbstractProject> aClass)
-		{
+		public boolean isApplicable(Class<? extends AbstractProject> aClass) {
 			// Indicates that this builder can be used with all kinds of project
 			// types
 			return true;
@@ -716,24 +2076,41 @@ public class CastAIPBuilder extends Builder
 		/**
 		 * This human readable name is used in the configuration screen.
 		 */
-		public String getDisplayName()
-		{
+		public String getDisplayName() {
 			return "CAST AIP 0: Configuration";
 		}
 
 		public FormValidation doTestConnection(
 				@QueryParameter("dmtWebServiceAddress") final String dmtWebServiceAddress,
-				@QueryParameter("cmsWebServiceAddress") String cmsWebServiceAddress) throws IOException,
-				ServletException
-		{
-			boolean ok = true;
+				@QueryParameter("cmsWebServiceAddress1") String cmsWebServiceAddress1,
+				@QueryParameter("cmsWebServiceAddress2") String cmsWebServiceAddress2,
+				@QueryParameter("cmsWebServiceAddress3") String cmsWebServiceAddress3,
+				@QueryParameter("cmsWebServiceAddress4") String cmsWebServiceAddress4,
+				@QueryParameter("cmsWebServiceAddress5") String cmsWebServiceAddress5)
+				throws IOException, ServletException {
+
 			if (dmtWebServiceAddress.isEmpty()) {
 				return FormValidation.error("Delivery Web Service Address must have a value!");
-			} else if (cmsWebServiceAddress.replaceAll("\t", "").isEmpty()) {
-				cmsWebServiceAddress = dmtWebServiceAddress;
 			}
 
+			if (cmsWebServiceAddress1 == null || cmsWebServiceAddress1.isEmpty()) {
+				cmsWebServiceAddress1 = dmtWebServiceAddress;
+			}
+
+			LinkedHashSet<String> cmsSet = new LinkedHashSet<String>();
+			cmsSet.add(cmsWebServiceAddress1);
+			cmsSet.add(cmsWebServiceAddress2);
+			cmsSet.add(cmsWebServiceAddress3);
+			cmsSet.add(cmsWebServiceAddress4);
+			cmsSet.add(cmsWebServiceAddress5);
+
+			return doCheckVersionCompatibility(dmtWebServiceAddress, cmsSet);
+		}
+
+		public FormValidation doCheckVersionCompatibility(String dmtWebServiceAddress, LinkedHashSet<String> cmsSet) {
+			boolean ok = true;
 			StringBuffer returnMsg = new StringBuffer();
+
 			try {
 				VersionInfo dvi = RemoteHelper.getVersionInfo(dmtWebServiceAddress);
 				returnMsg.append(String.format("Delivery Address Success (%s)\n", dvi.toString()));
@@ -741,20 +2118,27 @@ public class CastAIPBuilder extends Builder
 				returnMsg.append(String.format("Delivery Address Error %s\n", e.getMessage()));
 				ok = false;
 			}
-			try {
-				VersionInfo dvi = RemoteHelper.getVersionInfo(cmsWebServiceAddress);
-				if (dvi.getVersion().equals(Constants.wsVersionCompatibility)) {
-					returnMsg.append(String.format("Analysis Address Success (%s)\n", dvi.toString()));
-				} else {
-					returnMsg
-							.append(String
-									.format("WARNING ****** CAST Batch Web Service Version is not supported by this plugin ******* (%s)\n",
-											dvi.toString()));
+
+			String[] cmsWebAddrs = cmsSet.toArray(new String[cmsSet.size()]);
+
+			for (int i = 0; i < cmsWebAddrs.length; i++) {
+				try {
+					if (cmsWebAddrs[i] != null && !cmsWebAddrs[i].isEmpty()) {
+						VersionInfo dvi = RemoteHelper.getVersionInfo(cmsWebAddrs[i]);
+						if (dvi.getVersion().equals(Constants.wsVersionCompatibility)) {
+							returnMsg
+									.append(String.format("Analysis Address %d Success (%s)\n", i + 1, dvi.toString()));
+						} else {
+							returnMsg.append(String.format(
+									"WARNING ****** CAST Batch Web Service Version is not supported by this plugin ******* (%s)\n",
+									dvi.toString()));
+							ok = false;
+						}
+					}
+				} catch (HelperException e) {
+					returnMsg.append(String.format("Analysis Address %d Error %s", i + 1, e.getMessage()));
 					ok = false;
 				}
-			} catch (HelperException e) {
-				returnMsg.append(String.format("Analysis Address Error %s", e.getMessage()));
-				ok = false;
 			}
 
 			if (ok) {
@@ -762,15 +2146,13 @@ public class CastAIPBuilder extends Builder
 			} else {
 				return FormValidation.error(returnMsg.toString());
 			}
-
 		}
 
 		public ListBoxModel doFillReferenceVersionPRODItems(
 				@QueryParameter("cmsWebServiceAddress") final String cmsWebServiceAddress,
-				@QueryParameter("appName") final String appName)
-		{
+				@QueryParameter("appName") final String appName) {
 			ListBoxModel m = new ListBoxModel();
-			
+
 			try {
 				Collection<String> versions = RemoteHelper.listVersions(cmsWebServiceAddress, appName);
 
@@ -786,10 +2168,9 @@ public class CastAIPBuilder extends Builder
 
 		public ListBoxModel doFillReferenceVersionItems(
 				@QueryParameter("cmsWebServiceAddress") final String cmsWebServiceAddress,
-				@QueryParameter("appName") final String appName)
-		{
+				@QueryParameter("appName") final String appName) {
 			ListBoxModel m = new ListBoxModel();
-			
+
 			try {
 				Collection<String> versions = RemoteHelper.listVersions(cmsWebServiceAddress, appName);
 
@@ -804,18 +2185,17 @@ public class CastAIPBuilder extends Builder
 		}
 
 		public ListBoxModel doFillCastMSConnectionProfileItems(
-				@QueryParameter("dmtWebServiceAddress") final String dmtWebServiceAddress,
-				@QueryParameter("cmsWebServiceAddress") final String cmsWebServiceAddress)
-		{
+				@QueryParameter("dmtWebServiceAddress") final String dmtWebServiceAddress) {
 			Logger log = LogManager.getLogManager().getLogger(Logger.GLOBAL_LOGGER_NAME);
 			log.addHandler(new ConsoleHandler());
-			log.entering(getClass().getName(), String.format(
-					"doFillCastMSConnectionProfileItems (dmtWebServiceAddress<%s>)", cmsWebServiceAddress));
+			// log.entering(getClass().getName(), String
+			// .format("doFillCastMSConnectionProfileItems
+			// (dmtWebServiceAddress<%s>)", cmsWebServiceAddress));
 
 			ListBoxModel m = new ListBoxModel();
 
 			try {
-				String webServiceAddress =  (cmsWebServiceAddress==null||cmsWebServiceAddress.isEmpty())?dmtWebServiceAddress:cmsWebServiceAddress;
+				String webServiceAddress = dmtWebServiceAddress;
 
 				Collection<ConnectionProfile> cpList = RemoteHelper.listConnectionProfiles(webServiceAddress);
 				for (ConnectionProfile cp : cpList) {
@@ -827,29 +2207,29 @@ public class CastAIPBuilder extends Builder
 			}
 			return m;
 		}
-		
-		public ListBoxModel doFillRetentionPolicyItems(@QueryParameter String retentionPolicy) 
-		{
-			ListBoxModel m = new ListBoxModel(
-					new ListBoxModel.Option("--None--","",retentionPolicy.matches("")),
-					new ListBoxModel.Option("Monthly","12",retentionPolicy.matches("12"))
-//					new ListBoxModel.Option("Quarterly","4",retentionPolicy.matches("4")),
-//					new ListBoxModel.Option("Every 6 Months","2",retentionPolicy.matches("2"))
-					);
+
+		public ListBoxModel doFillRetentionPolicyItems(@QueryParameter String retentionPolicy) {
+			ListBoxModel m = new ListBoxModel(new ListBoxModel.Option("--None--", "", retentionPolicy.matches("")),
+					new ListBoxModel.Option("Monthly", "12", retentionPolicy.matches("12"))
+			// new
+			// ListBoxModel.Option("Quarterly","4",retentionPolicy.matches("4")),
+			// new ListBoxModel.Option("Every 6
+			// Months","2",retentionPolicy.matches("2"))
+			);
 			return m;
 		}
 
-		public ListBoxModel doFillAppNameItems(@QueryParameter("dmtWebServiceAddress") final String webServiceAddress, @QueryParameter("status") String status)
-		{
+		public ListBoxModel doFillAppNameItems(@QueryParameter("dmtWebServiceAddress") final String webServiceAddress,
+				@QueryParameter("status") String status) {
 			ListBoxModel m = new ListBoxModel();
-			
+
 			try {
 				Collection<String> apps = RemoteHelper.listApplications(webServiceAddress);
 
 				for (String app : apps) {
 					m.add(app);
 				}
-				
+
 			} catch (HelperException e) {
 				return m;
 			}
@@ -857,8 +2237,7 @@ public class CastAIPBuilder extends Builder
 		}
 
 		@Override
-		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
-		{
+		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
 			save();
 			return super.configure(req, formData);
 		}
