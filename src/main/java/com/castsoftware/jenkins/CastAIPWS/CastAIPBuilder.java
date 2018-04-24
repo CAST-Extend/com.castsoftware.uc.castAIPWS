@@ -64,22 +64,6 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import net.sf.json.JSONObject;
 
-/**
- * @author NKA
- *
- */
-/**
- * @author NKA
- *
- */
-/**
- * @author NKA
- *
- */
-/**
- * @author NKA
- *
- */
 public class CastAIPBuilder extends Builder {
   private final String               dmtWebServiceAddress;
   private String                     cmsWebServiceAddress;

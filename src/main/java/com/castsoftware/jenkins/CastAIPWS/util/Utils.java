@@ -1,13 +1,5 @@
 package com.castsoftware.jenkins.CastAIPWS.util;
 
-import hudson.EnvVars;
-import hudson.Launcher;
-import hudson.XmlFile;
-import hudson.model.*;
-import hudson.model.BuildListener;
-import hudson.tasks.Builder;
-import jenkins.model.*;
-
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.rmi.RemoteException;
@@ -19,7 +11,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-
 import org.apache.axis.AxisFault;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -28,40 +19,39 @@ import org.jdom.input.SAXBuilder;
 
 import com.castsoftware.batch.CastWebService;
 import com.castsoftware.exception.HelperException;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPAcceptBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPAnalyzeBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPArchiveDeliveryBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPCSSBackupBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPDeliverBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPFinalBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPOptimizeDatabaseBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPPublishBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPSnapshotBuilder;
-import com.castsoftware.jenkins.CastAIPWS.CastAIPValidationBuilder;
 import com.castsoftware.util.CastUtil;
 import com.castsoftware.util.VersionInfo;
 import com.castsoftware.webservice.RemoteHelper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import hudson.EnvVars;
+import hudson.Launcher;
+import hudson.XmlFile;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.tasks.Builder;
+import jenkins.model.Jenkins;
+
 public class Utils
 {
 
-	static public boolean runJobs(AbstractBuild build, Launcher launcher, BuildListener listener, Class thisClass,
-			int currentStep) throws IOException, InterruptedException
-	{
-		StackTraceElement[] elementList = Thread.currentThread().getStackTrace();
-		if (elementList.length > 3 && elementList[3].getMethodName().equals("runJobs")) return true;
-
-		for (Builder b : Utils.getBuilderList(Utils.getJobTaskList(build, listener), build, listener, currentStep,
-				thisClass)) {
-
-			if (!b.perform(build, launcher, listener)) {
-				return false;
-			}
-		}
-		return true;
-	}
+//	static public boolean runJobs(AbstractBuild build, Launcher launcher, BuildListener listener, Class thisClass,
+//			int currentStep) throws IOException, InterruptedException
+//	{
+//		StackTraceElement[] elementList = Thread.currentThread().getStackTrace();
+//		if (elementList.length > 3 && elementList[3].getMethodName().equals("runJobs")) return true;
+//
+//		for (Builder b : Utils.getBuilderList(Utils.getJobTaskList(build, listener), build, listener, currentStep,
+//				thisClass)) {
+//
+//			if (!b.perform(build, launcher, listener)) {
+//				return false;
+//			}
+//		}
+//		return true;
+//	}
 
 	static public List<Element> getJobTaskList(AbstractBuild build, BuildListener listener) throws IOException,
 			InterruptedException
@@ -105,119 +95,119 @@ public class Utils
 		return retList;
 	}
 
-	static public List<Builder> getBuilderList(List<Element> taskList, AbstractBuild build, BuildListener listener,
-			int currentStep, Class thisClass) throws IOException, InterruptedException
-	{
-		List<Builder> builders = new ArrayList<Builder>();
-		EnvVars envVars = build.getEnvironment(listener);
-
-		boolean backup = Boolean.parseBoolean(envVars.get(Constants.RUN_BACKUP));
-		boolean da = Boolean.parseBoolean(envVars.get(Constants.RUN_DELIVERY_APPLICATION));
-		boolean ad = Boolean.parseBoolean(envVars.get(Constants.RUN_ACCEPT_DELIVERY));
-		boolean ra = Boolean.parseBoolean(envVars.get(Constants.RUN_ANALYSIS));
-		boolean rs = Boolean.parseBoolean(envVars.get(Constants.RUN_SNAPSHOT));
-		boolean archive = Boolean.parseBoolean(envVars.get(Constants.RUN_ARCHIVE_DELIVERY));
-		boolean rav = Boolean.parseBoolean(envVars.get(Constants.RUN_VALIDATION));
-		boolean publish = Boolean.parseBoolean(envVars.get(Constants.RUN_PUBLISH_SNAPSHOT));
-		boolean optimize = Boolean.parseBoolean(envVars.get(Constants.RUN_OPTIMIZE_DATABASE));
-
-		if (currentStep < Constants.RunBackup && backup
-				&& Utils.canRunTask(taskList, CastAIPCSSBackupBuilder.class, thisClass)) {
-			builders.add(new CastAIPCSSBackupBuilder());
-		} else if (backup && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunDMT && da && Utils.canRunTask(taskList, CastAIPDeliverBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPCSSBackupBuilder.class, thisClass)) {
-				builders.add(new CastAIPDeliverBuilder());
-			} else {
-				return builders;
-			}
-		} else if (ad && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunAcceptDelivery && ad
-				&& Utils.canRunTask(taskList, CastAIPAcceptBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPDeliverBuilder.class, thisClass)) {
-				builders.add(new CastAIPAcceptBuilder());
-			} else {
-				return builders;
-			}
-		} else if (ad && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunAnalysis && ra
-				&& Utils.canRunTask(taskList, CastAIPAnalyzeBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPAcceptBuilder.class, thisClass)) {
-				builders.add(new CastAIPAnalyzeBuilder());
-			} else {
-				return builders;
-			}
-		} else if (ra && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunSnapshot && rs
-				&& Utils.canRunTask(taskList, CastAIPSnapshotBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPAnalyzeBuilder.class, thisClass)) {
-				builders.add(new CastAIPSnapshotBuilder());
-			} else {
-				return builders;
-			}
-		} else if (rs && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunValidation && rav
-				&& Utils.canRunTask(taskList, CastAIPValidationBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPSnapshotBuilder.class, thisClass)) {
-				builders.add(new CastAIPValidationBuilder());
-			} else {
-				return builders;
-			}
-		} else if (rav && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunPublishAAD && publish
-				&& Utils.canRunTask(taskList, CastAIPPublishBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPValidationBuilder.class, thisClass)) {
-				builders.add(new CastAIPPublishBuilder());
-			} else {
-				return builders;
-			}
-		} else if (publish && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunDatabaseOptimize && optimize
-				&& Utils.canRunTask(taskList, CastAIPOptimizeDatabaseBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPPublishBuilder.class, thisClass)) {
-				builders.add(new CastAIPOptimizeDatabaseBuilder());
-			} else {
-				return builders;
-			}
-		} else if (optimize && builders.size() > 0) {
-			return builders;
-		}
-
-		if (currentStep < Constants.RunArchiveDelivery && archive
-				&& Utils.canRunTask(taskList, CastAIPArchiveDeliveryBuilder.class, thisClass)) {
-			if (Utils.canRunTask(taskList, CastAIPOptimizeDatabaseBuilder.class, thisClass)) {
-				builders.add(new CastAIPArchiveDeliveryBuilder());
-			} else {
-				return builders;
-			}
-		} else if (archive && builders.size() > 0) {
-			return builders;
-		}
-
-		builders.add(new CastAIPFinalBuilder());
-		return builders;
-	}
+//	static public List<Builder> getBuilderList(List<Element> taskList, AbstractBuild build, BuildListener listener,
+//			int currentStep, Class thisClass) throws IOException, InterruptedException
+//	{
+//		List<Builder> builders = new ArrayList<Builder>();
+//		EnvVars envVars = build.getEnvironment(listener);
+//
+//		boolean backup = Boolean.parseBoolean(envVars.get(Constants.RUN_BACKUP));
+//		boolean da = Boolean.parseBoolean(envVars.get(Constants.RUN_DELIVERY_APPLICATION));
+//		boolean ad = Boolean.parseBoolean(envVars.get(Constants.RUN_ACCEPT_DELIVERY));
+//		boolean ra = Boolean.parseBoolean(envVars.get(Constants.RUN_ANALYSIS));
+//		boolean rs = Boolean.parseBoolean(envVars.get(Constants.RUN_SNAPSHOT));
+//		boolean archive = Boolean.parseBoolean(envVars.get(Constants.RUN_ARCHIVE_DELIVERY));
+//		boolean rav = Boolean.parseBoolean(envVars.get(Constants.RUN_VALIDATION));
+//		boolean publish = Boolean.parseBoolean(envVars.get(Constants.RUN_PUBLISH_SNAPSHOT));
+//		boolean optimize = Boolean.parseBoolean(envVars.get(Constants.RUN_OPTIMIZE_DATABASE));
+//
+//		if (currentStep < Constants.RunBackup && backup
+//				&& Utils.canRunTask(taskList, CastAIPCSSBackupBuilder.class, thisClass)) {
+//			builders.add(new CastAIPCSSBackupBuilder());
+//		} else if (backup && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunDMT && da && Utils.canRunTask(taskList, CastAIPDeliverBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPCSSBackupBuilder.class, thisClass)) {
+//				builders.add(new CastAIPDeliverBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (ad && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunAcceptDelivery && ad
+//				&& Utils.canRunTask(taskList, CastAIPAcceptBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPDeliverBuilder.class, thisClass)) {
+//				builders.add(new CastAIPAcceptBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (ad && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunAnalysis && ra
+//				&& Utils.canRunTask(taskList, CastAIPAnalyzeBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPAcceptBuilder.class, thisClass)) {
+//				builders.add(new CastAIPAnalyzeBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (ra && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunSnapshot && rs
+//				&& Utils.canRunTask(taskList, CastAIPSnapshotBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPAnalyzeBuilder.class, thisClass)) {
+//				builders.add(new CastAIPSnapshotBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (rs && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunValidation && rav
+//				&& Utils.canRunTask(taskList, CastAIPValidationBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPSnapshotBuilder.class, thisClass)) {
+//				builders.add(new CastAIPValidationBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (rav && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunPublishAAD && publish
+//				&& Utils.canRunTask(taskList, CastAIPPublishBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPValidationBuilder.class, thisClass)) {
+//				builders.add(new CastAIPPublishBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (publish && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunDatabaseOptimize && optimize
+//				&& Utils.canRunTask(taskList, CastAIPOptimizeDatabaseBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPPublishBuilder.class, thisClass)) {
+//				builders.add(new CastAIPOptimizeDatabaseBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (optimize && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		if (currentStep < Constants.RunArchiveDelivery && archive
+//				&& Utils.canRunTask(taskList, CastAIPArchiveDeliveryBuilder.class, thisClass)) {
+//			if (Utils.canRunTask(taskList, CastAIPOptimizeDatabaseBuilder.class, thisClass)) {
+//				builders.add(new CastAIPArchiveDeliveryBuilder());
+//			} else {
+//				return builders;
+//			}
+//		} else if (archive && builders.size() > 0) {
+//			return builders;
+//		}
+//
+//		builders.add(new CastAIPFinalBuilder());
+//		return builders;
+//	}
 
 	static public Element findElement(Element current, String elementName)
 	{
